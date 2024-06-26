@@ -8,29 +8,24 @@ import (
 	"strings"
 )
 
-const (
-	configFile = "baby.conf"
-	version    = "1.0"
-)
+const configFile = "baby.conf"
 
 func main() {
 	args := os.Args[1:]
 
 	if len(args) == 0 {
-		fmt.Println("Uso: ./baby <option>")
+		fmt.Println("Usage: ./baby <option>")
 		return
 	}
 
 	switch args[0] {
 	case "-h":
 		showHelp()
-	case "-v":
-		showVersion()
 	case "-l":
 		listRules()
 	case "-n":
 		if len(args) < 3 {
-			fmt.Println("Error: Incorrect use of -n. Expected: baby -n <name> <command>")
+			fmt.Println("Error: Incorrect usage of -n. It should be: ./baby -n <name> <command>")
 			return
 		}
 		name := args[1]
@@ -38,7 +33,7 @@ func main() {
 		createRule(name, command)
 	case "-r":
 		if len(args) == 1 {
-			fmt.Println("Error: Incorrect use of -r. Expected: baby -r <name> or baby -r a")
+			fmt.Println("Error: Incorrect usage of -r. It should be: ./baby -r <name> or ./baby -r a")
 			return
 		}
 		name := args[1]
@@ -49,7 +44,7 @@ func main() {
 		}
 	case "-c":
 		if len(args) < 3 {
-			fmt.Println("Error: Incorrect use of -c. Expected: baby -c <name> <command>")
+			fmt.Println("Error: Incorrect usage of -c. It should be: ./baby -c <name> <command>")
 			return
 		}
 		name := args[1]
@@ -57,14 +52,16 @@ func main() {
 		updateRule(name, command)
 	case "-ln":
 		if len(args) != 2 {
-			fmt.Println("Error: Incorrect use of -ln. Expected: baby -ln <name>")
+			fmt.Println("Error: Incorrect usage of -ln. It should be: ./baby -ln <name>")
 			return
 		}
 		name := args[1]
 		showRule(name)
+	case "-v":
+		fmt.Println("Baby version 1.0")
 	default:
 		if strings.HasPrefix(args[0], "-") {
-			fmt.Println("Unknown option. Do baby -h to show help.")
+			fmt.Println("Unrecognized option. Use ./baby -h to see the available options.")
 		} else {
 			runCommands(args)
 		}
@@ -72,30 +69,25 @@ func main() {
 }
 
 func showHelp() {
-	fmt.Println("Using: baby <option>")
+	fmt.Println("Usage: ./baby <option>")
 	fmt.Println("Available options:")
 	fmt.Println("-l\t\t\tList stored rules")
 	fmt.Println("-n <name> <command>\tCreate a new rule")
-	fmt.Println("-r <name>\t\tDelete a rule")
+	fmt.Println("-r <name>\t\tDelete an existing rule")
 	fmt.Println("-r a \t\t\tDelete all rules")
-	fmt.Println("-c <name> <command>\tUpdate a command")
-	fmt.Println("-ln <name>\t\tList an specific rule")
-	fmt.Println("-h\t\t\tShow the help")
-	fmt.Println("-v\t\t\tShow the version of Baby")
-	fmt.Println("Examples of use:")
+	fmt.Println("-c <name> <command>\tUpdate the command of a rule")
+	fmt.Println("-ln <name>\t\tShow the contents of a specific rule")
+	fmt.Println("-h\t\t\tShow this help")
+	fmt.Println("-v\t\t\tShow the program version")
+	fmt.Println("Usage examples:")
 	fmt.Println("Create a new rule: baby -n update 'sudo apt update -y'")
-	fmt.Println("Run a block of rules: baby rule1 rule2")
-}
-
-func showVersion() {
-	fmt.Printf("Baby version %s\n", version)
 }
 
 func listRules() {
 	file, err := os.Open(configFile)
 	if err != nil {
-		fmt.Println("Unable to open config file:", err)
-		fmt.Println("There are no rules in Baby, create the first one")
+		fmt.Println("Failed to open the configuration file:", err)
+		fmt.Println("No rules have been created in Baby yet.")
 		return
 	}
 	defer file.Close()
@@ -115,34 +107,34 @@ func listRules() {
 	}
 
 	if !found {
-		fmt.Println("There are no rules yet in Baby")
+		fmt.Println("No rules have been created in Baby yet.")
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Println("Error opening the config file:", err)
+		fmt.Println("Error reading the configuration file:", err)
 	}
 }
 
 func createRule(name, command string) {
 	file, err := os.OpenFile(configFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		fmt.Println("Error opening the config file:", err)
+		fmt.Println("Failed to open the configuration file:", err)
 		return
 	}
 	defer file.Close()
 
 	_, err = file.WriteString(fmt.Sprintf("%s = %s\n", name, command))
 	if err != nil {
-		fmt.Println("Error writing in config file:", err)
+		fmt.Println("Error writing to the configuration file:", err)
 		return
 	}
-	fmt.Printf("Rule '%s' correctly added.\n", name)
+	fmt.Printf("Rule '%s' successfully added.\n", name)
 }
 
 func deleteRule(name string) {
 	lines, err := readLines(configFile)
 	if err != nil {
-		fmt.Println("Error opening config file:", err)
+		fmt.Println("Error reading the configuration file:", err)
 		return
 	}
 
@@ -156,31 +148,31 @@ func deleteRule(name string) {
 	}
 
 	if !found {
-		fmt.Printf("Unable to find the rule '%s'.\n", name)
+		fmt.Printf("Rule '%s' not found.\n", name)
 		return
 	}
 
 	err = writeLines(configFile, lines)
 	if err != nil {
-		fmt.Println("Error writing in config file:", err)
+		fmt.Println("Error writing to the configuration file:", err)
 		return
 	}
-	fmt.Printf("Rule '%s' deleted correctly.\n", name)
+	fmt.Printf("Rule '%s' successfully deleted.\n", name)
 }
 
 func deleteAllRules() {
 	err := os.Remove(configFile)
 	if err != nil {
-		fmt.Println("Error deleting rules:", err)
+		fmt.Println("Error deleting all rules:", err)
 		return
 	}
-	fmt.Println("All rules were deleted successfully.")
+	fmt.Println("All rules have been successfully deleted.")
 }
 
 func updateRule(name, command string) {
 	lines, err := readLines(configFile)
 	if err != nil {
-		fmt.Println("Error reading config file:", err)
+		fmt.Println("Error reading the configuration file:", err)
 		return
 	}
 
@@ -194,22 +186,22 @@ func updateRule(name, command string) {
 	}
 
 	if !found {
-		fmt.Printf("Unable to find the rule '%s'.\n", name)
+		fmt.Printf("Rule '%s' not found.\n", name)
 		return
 	}
 
 	err = writeLines(configFile, lines)
 	if err != nil {
-		fmt.Println("Error writing the config file:", err)
+		fmt.Println("Error writing to the configuration file:", err)
 		return
 	}
-	fmt.Printf("Rule'%s' correctly updated.\n", name)
+	fmt.Printf("Rule '%s' successfully updated.\n", name)
 }
 
 func showRule(name string) {
 	file, err := os.Open(configFile)
 	if err != nil {
-		fmt.Println("Error opening the config file:", err)
+		fmt.Println("Failed to open the configuration file:", err)
 		return
 	}
 	defer file.Close()
@@ -226,7 +218,7 @@ func showRule(name string) {
 	}
 
 	if !found {
-		fmt.Printf("The rule '%s' does not exist.\n", name)
+		fmt.Printf("Rule '%s' does not exist.\n", name)
 	}
 }
 
@@ -243,12 +235,12 @@ func runCommands(commands []string) {
 	}
 
 	if len(commandList) == 0 {
-		fmt.Println("There are no rules to run.")
+		fmt.Println("No rules found to execute.")
 		return
 	}
 
 	fullCommand := strings.Join(commandList, " && ")
-	fmt.Println("Running:", fullCommand)
+	fmt.Println("Executing:", fullCommand)
 
 	err := executeCommand(fullCommand)
 	if err != nil {
@@ -259,42 +251,41 @@ func runCommands(commands []string) {
 func getCommand(name string) (string, error) {
 	file, err := os.Open(configFile)
 	if err != nil {
-		return "", fmt.Errorf("unable to open the config file: %w", err)
+		return "", fmt.Errorf("failed to open the configuration file: %w", err)
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, name+" = ") {
-			return strings.TrimSpace(strings.SplitN(line, "=", 2)[1]), nil
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		ruleName := strings.TrimSpace(parts[0])
+		command := strings.TrimSpace(parts[1])
+		if ruleName == name {
+			return command, nil
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("unable to read the config file: %w", err)
+		return "", fmt.Errorf("error reading the configuration file: %w", err)
 	}
 
-	return "", fmt.Errorf("unable to find the rule '%s'", name)
+	return "", fmt.Errorf("rule '%s' not found", name)
 }
 
-func executeCommand(command string) error {
-	fmt.Println("Running command:", command)
-
-	cmd := exec.Command("bash", "-c", command)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	err := cmd.Run()
-	if err != nil {
-		return fmt.Errorf("error running command: %w", err)
-	}
-
-	return nil
+func executeCommand(cmd string) error {
+	command := exec.Command("sh", "-c", cmd)
+	command.Stdout = os.Stdout
+	command.Stderr = os.Stderr
+	command.Stdin = os.Stdin
+	return command.Run()
 }
 
-func readLines(filename string) ([]string, error) {
-	file, err := os.Open(filename)
+func readLines(path string) ([]string, error) {
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -308,8 +299,8 @@ func readLines(filename string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-func writeLines(filename string, lines []string) error {
-	file, err := os.Create(filename)
+func writeLines(path string, lines []string) error {
+	file, err := os.Create(path)
 	if err != nil {
 		return err
 	}
