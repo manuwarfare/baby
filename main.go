@@ -30,7 +30,7 @@ func main() {
 		}
 		name := args[1]
 		command := strings.Join(args[2:], " ")
-		createRule(name, command)
+		createOrUpdateRule(name, command)
 	case "-r":
 		if len(args) == 1 {
 			fmt.Println("Error: Incorrect usage of -r. It should be: ./baby -r <name> or ./baby -r a")
@@ -49,7 +49,7 @@ func main() {
 		}
 		name := args[1]
 		command := strings.Join(args[2:], " ")
-		updateRule(name, command)
+		createOrUpdateRule(name, command)
 	case "-ln":
 		if len(args) != 2 {
 			fmt.Println("Error: Incorrect usage of -ln. It should be: ./baby -ln <name>")
@@ -69,7 +69,7 @@ func main() {
 }
 
 func showHelp() {
-	fmt.Println("Usage: ./baby <option>")
+	fmt.Println("Usage: baby <option>")
 	fmt.Println("Available options:")
 	fmt.Println("-l\t\t\tList stored rules")
 	fmt.Println("-n <name> <command>\tCreate a new rule")
@@ -115,7 +115,41 @@ func listRules() {
 	}
 }
 
-func createRule(name, command string) {
+func createOrUpdateRule(name, command string) {
+	lines, err := readLines(configFile)
+	if err != nil {
+		fmt.Println("Error reading the configuration file:", err)
+		return
+	}
+
+	// Check if the rule already exists
+	for i, line := range lines {
+		if strings.HasPrefix(line, name+" = ") {
+			// Rule already exists, ask user if they want to overwrite it
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Printf("Rule '%s' already exists. Do you want to overwrite it? (y/n): ", name)
+			answer, _ := reader.ReadString('\n')
+			answer = strings.TrimSpace(answer)
+			if answer == "y" {
+				lines[i] = fmt.Sprintf("%s = %s", name, command)
+				err := writeLines(configFile, lines)
+				if err != nil {
+					fmt.Println("Error writing to the configuration file:", err)
+					return
+				}
+				fmt.Printf("Rule '%s' successfully overwritten.\n", name)
+			} else if answer == "n" {
+				fmt.Println("Installation cancelled by user.")
+				return
+			} else {
+				fmt.Println("Invalid input. Installation cancelled.")
+				return
+			}
+			return
+		}
+	}
+
+	// If rule does not exist, create a new one
 	file, err := os.OpenFile(configFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		fmt.Println("Failed to open the configuration file:", err)
@@ -167,35 +201,6 @@ func deleteAllRules() {
 		return
 	}
 	fmt.Println("All rules have been successfully deleted.")
-}
-
-func updateRule(name, command string) {
-	lines, err := readLines(configFile)
-	if err != nil {
-		fmt.Println("Error reading the configuration file:", err)
-		return
-	}
-
-	found := false
-	for i, line := range lines {
-		if strings.HasPrefix(line, name+" = ") {
-			lines[i] = fmt.Sprintf("%s = %s", name, command)
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		fmt.Printf("Rule '%s' not found.\n", name)
-		return
-	}
-
-	err = writeLines(configFile, lines)
-	if err != nil {
-		fmt.Println("Error writing to the configuration file:", err)
-		return
-	}
-	fmt.Printf("Rule '%s' successfully updated.\n", name)
 }
 
 func showRule(name string) {
