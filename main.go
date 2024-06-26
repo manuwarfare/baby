@@ -17,7 +17,7 @@ func main() {
 	args := os.Args[1:]
 
 	if len(args) == 0 {
-		fmt.Println("Uso: ./baby <opción>")
+		fmt.Println("Uso: ./baby <option>")
 		return
 	}
 
@@ -30,7 +30,7 @@ func main() {
 		listRules()
 	case "-n":
 		if len(args) < 3 {
-			fmt.Println("Error: Uso incorrecto de -n. Debe ser: ./baby -n <nombre> <comando>")
+			fmt.Println("Error: Incorrect use of -n. Expected: baby -n <name> <command>")
 			return
 		}
 		name := args[1]
@@ -38,7 +38,7 @@ func main() {
 		createRule(name, command)
 	case "-r":
 		if len(args) == 1 {
-			fmt.Println("Error: Uso incorrecto de -r. Debe ser: ./baby -r <nombre> o ./baby -r a")
+			fmt.Println("Error: Incorrect use of -r. Expected: baby -r <name> or baby -r a")
 			return
 		}
 		name := args[1]
@@ -49,7 +49,7 @@ func main() {
 		}
 	case "-c":
 		if len(args) < 3 {
-			fmt.Println("Error: Uso incorrecto de -c. Debe ser: ./baby -c <nombre> <comando>")
+			fmt.Println("Error: Incorrect use of -c. Expected: baby -c <name> <command>")
 			return
 		}
 		name := args[1]
@@ -57,14 +57,14 @@ func main() {
 		updateRule(name, command)
 	case "-ln":
 		if len(args) != 2 {
-			fmt.Println("Error: Uso incorrecto de -ln. Debe ser: ./baby -ln <nombre>")
+			fmt.Println("Error: Incorrect use of -ln. Expected: baby -ln <name>")
 			return
 		}
 		name := args[1]
 		showRule(name)
 	default:
 		if strings.HasPrefix(args[0], "-") {
-			fmt.Println("Opción no reconocida. Usa ./baby -h para ver las opciones disponibles.")
+			fmt.Println("Unknown option. Do baby -h to show help.")
 		} else {
 			runCommands(args)
 		}
@@ -72,30 +72,30 @@ func main() {
 }
 
 func showHelp() {
-	fmt.Println("Uso: ./baby <opción>")
-	fmt.Println("Opciones disponibles:")
-	fmt.Println("-l\t\t\tListar las reglas almacenadas")
-	fmt.Println("-n <nombre> <comando>\tCrear una nueva regla")
-	fmt.Println("-r <nombre>\t\tBorrar una regla existente")
-	fmt.Println("-r a \t\t\tBorra todas las reglas")
-	fmt.Println("-c <nombre> <comando>\tActualizar el comando de una regla")
-	fmt.Println("-ln <nombre>\t\tLista el contenido de una regla específica")
-	fmt.Println("-h\t\t\tMostrar esta ayuda")
-	fmt.Println("-v\t\t\tMostrar la versión del programa")
-	fmt.Println("Ejemplos de uso:")
-	fmt.Println("Crea una nueva regla: baby -n update 'sudo apt update -y'")
-	fmt.Println("Corre reglas en bloque: baby rule1 rule2")
+	fmt.Println("Using: baby <option>")
+	fmt.Println("Available options:")
+	fmt.Println("-l\t\t\tList stored rules")
+	fmt.Println("-n <name> <command>\tCreate a new rule")
+	fmt.Println("-r <name>\t\tDelete a rule")
+	fmt.Println("-r a \t\t\tDelete all rules")
+	fmt.Println("-c <name> <command>\tUpdate a command")
+	fmt.Println("-ln <name>\t\tList an specific rule")
+	fmt.Println("-h\t\t\tShow the help")
+	fmt.Println("-v\t\t\tShow the version of Baby")
+	fmt.Println("Examples of use:")
+	fmt.Println("Create a new rule: baby -n update 'sudo apt update -y'")
+	fmt.Println("Run a block of rules: baby rule1 rule2")
 }
 
 func showVersion() {
-	fmt.Printf("Baby versión %s\n", version)
+	fmt.Printf("Baby version %s\n", version)
 }
 
 func listRules() {
 	file, err := os.Open(configFile)
 	if err != nil {
-		fmt.Println("No se pudo abrir el archivo de configuración:", err)
-		fmt.Println("Aún no hay reglas creadas en Baby")
+		fmt.Println("Unable to open config file:", err)
+		fmt.Println("There are no rules in Baby, create the first one")
 		return
 	}
 	defer file.Close()
@@ -115,34 +115,34 @@ func listRules() {
 	}
 
 	if !found {
-		fmt.Println("Aún no hay reglas creadas en Baby")
+		fmt.Println("There are no rules yet in Baby")
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Println("Error al leer el archivo de configuración:", err)
+		fmt.Println("Error opening the config file:", err)
 	}
 }
 
 func createRule(name, command string) {
 	file, err := os.OpenFile(configFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		fmt.Println("No se pudo abrir el archivo de configuración:", err)
+		fmt.Println("Error opening the config file:", err)
 		return
 	}
 	defer file.Close()
 
 	_, err = file.WriteString(fmt.Sprintf("%s = %s\n", name, command))
 	if err != nil {
-		fmt.Println("Error al escribir en el archivo de configuración:", err)
+		fmt.Println("Error writing in config file:", err)
 		return
 	}
-	fmt.Printf("Regla '%s' añadida correctamente.\n", name)
+	fmt.Printf("Rule '%s' correctly added.\n", name)
 }
 
 func deleteRule(name string) {
 	lines, err := readLines(configFile)
 	if err != nil {
-		fmt.Println("Error al leer el archivo de configuración:", err)
+		fmt.Println("Error opening config file:", err)
 		return
 	}
 
@@ -156,31 +156,31 @@ func deleteRule(name string) {
 	}
 
 	if !found {
-		fmt.Printf("No se encontró la regla '%s'.\n", name)
+		fmt.Printf("Unable to find the rule '%s'.\n", name)
 		return
 	}
 
 	err = writeLines(configFile, lines)
 	if err != nil {
-		fmt.Println("Error al escribir en el archivo de configuración:", err)
+		fmt.Println("Error writing in config file:", err)
 		return
 	}
-	fmt.Printf("Regla '%s' eliminada correctamente.\n", name)
+	fmt.Printf("Rule '%s' deleted correctly.\n", name)
 }
 
 func deleteAllRules() {
 	err := os.Remove(configFile)
 	if err != nil {
-		fmt.Println("Error al borrar todas las reglas:", err)
+		fmt.Println("Error deleting rules:", err)
 		return
 	}
-	fmt.Println("Todas las reglas han sido eliminadas correctamente.")
+	fmt.Println("All rules were deleted successfully.")
 }
 
 func updateRule(name, command string) {
 	lines, err := readLines(configFile)
 	if err != nil {
-		fmt.Println("Error al leer el archivo de configuración:", err)
+		fmt.Println("Error reading config file:", err)
 		return
 	}
 
@@ -194,22 +194,22 @@ func updateRule(name, command string) {
 	}
 
 	if !found {
-		fmt.Printf("No se encontró la regla '%s'.\n", name)
+		fmt.Printf("Unable to find the rule '%s'.\n", name)
 		return
 	}
 
 	err = writeLines(configFile, lines)
 	if err != nil {
-		fmt.Println("Error al escribir en el archivo de configuración:", err)
+		fmt.Println("Error writing the config file:", err)
 		return
 	}
-	fmt.Printf("Regla '%s' actualizada correctamente.\n", name)
+	fmt.Printf("Rule'%s' correctly updated.\n", name)
 }
 
 func showRule(name string) {
 	file, err := os.Open(configFile)
 	if err != nil {
-		fmt.Println("No se pudo abrir el archivo de configuración:", err)
+		fmt.Println("Error opening the config file:", err)
 		return
 	}
 	defer file.Close()
@@ -226,7 +226,7 @@ func showRule(name string) {
 	}
 
 	if !found {
-		fmt.Printf("La regla '%s' no existe.\n", name)
+		fmt.Printf("The rule '%s' does not exist.\n", name)
 	}
 }
 
@@ -243,23 +243,23 @@ func runCommands(commands []string) {
 	}
 
 	if len(commandList) == 0 {
-		fmt.Println("No se encontraron reglas para ejecutar.")
+		fmt.Println("There are no rules to run.")
 		return
 	}
 
 	fullCommand := strings.Join(commandList, " && ")
-	fmt.Println("Ejecutando:", fullCommand)
+	fmt.Println("Running:", fullCommand)
 
 	err := executeCommand(fullCommand)
 	if err != nil {
-		fmt.Printf("Error al ejecutar los comandos: %s\n", err)
+		fmt.Printf("Error executing commands: %s\n", err)
 	}
 }
 
 func getCommand(name string) (string, error) {
 	file, err := os.Open(configFile)
 	if err != nil {
-		return "", fmt.Errorf("no se pudo abrir el archivo de configuración: %w", err)
+		return "", fmt.Errorf("unable to open the config file: %w", err)
 	}
 	defer file.Close()
 
@@ -272,14 +272,14 @@ func getCommand(name string) (string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("error al leer el archivo de configuración: %w", err)
+		return "", fmt.Errorf("unable to read the config file: %w", err)
 	}
 
-	return "", fmt.Errorf("no se encontró una regla asociada a '%s'", name)
+	return "", fmt.Errorf("unable to find the rule '%s'", name)
 }
 
 func executeCommand(command string) error {
-	fmt.Println("Ejecutando comando:", command)
+	fmt.Println("Running command:", command)
 
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Stdout = os.Stdout
@@ -287,7 +287,7 @@ func executeCommand(command string) error {
 
 	err := cmd.Run()
 	if err != nil {
-		return fmt.Errorf("error al ejecutar el comando: %w", err)
+		return fmt.Errorf("error running command: %w", err)
 	}
 
 	return nil
