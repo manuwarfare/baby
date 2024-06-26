@@ -19,3 +19,9 @@ Previous requirements to compile: golang ('gcc-go', 'golang-bin')
 To install Golang in your system run
 
 `sudo dnf golang` or `sudo apt golang` depending on your GNU/Linux distribution.
+
+:pencil: **CREATING RULES**
+
+First step after install the program is run `baby -h` to know about how the script functions. Some examples to create rules in a Fedora system terminal:
+
+`baby -n update "sudo dnf update -y && sudo dnf upgrade -y"` this long command will run after with only type `baby update`
