@@ -6,6 +6,8 @@ You can easily set rules, delete them, list them and update them with a clear li
 
 Go to release section and download the latest version, in that page you can find the installation instructions for the binary files.
 
+  🔗 ![Download the latest version](https://github.com/manuwarfare/baby/latest-release)
+
 :white_check_mark: **COMPILE YOURSELF**
 
 If you preffer to compile yourself the source code you need to download the _main.go_ file and create a file named _baby.conf_, then run the following commands:
