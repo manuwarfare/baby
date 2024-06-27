@@ -8,13 +8,13 @@ import (
 	"strings"
 )
 
-const configFile = "baby.conf"
+const configFile = "/usr/local/bin/baby.conf"
 
 func main() {
 	args := os.Args[1:]
 
 	if len(args) == 0 {
-		fmt.Println("Usage: ./baby <option>")
+		fmt.Println("Usage: baby <option>")
 		return
 	}
 
@@ -25,15 +25,15 @@ func main() {
 		listRules()
 	case "-n":
 		if len(args) < 3 {
-			fmt.Println("Error: Incorrect usage of -n. It should be: ./baby -n <name> <command>")
+			fmt.Println("Error: Incorrect usage of -n. It should be: baby -n <name> <command>")
 			return
 		}
 		name := args[1]
 		command := strings.Join(args[2:], " ")
-		createOrUpdateRule(name, command)
+		createRule(name, command)
 	case "-r":
 		if len(args) == 1 {
-			fmt.Println("Error: Incorrect usage of -r. It should be: ./baby -r <name> or ./baby -r a")
+			fmt.Println("Error: Incorrect usage of -r. It should be: baby -r <name> or ./baby -r a")
 			return
 		}
 		name := args[1]
@@ -44,15 +44,15 @@ func main() {
 		}
 	case "-c":
 		if len(args) < 3 {
-			fmt.Println("Error: Incorrect usage of -c. It should be: ./baby -c <name> <command>")
+			fmt.Println("Error: Incorrect usage of -c. It should be: baby -c <name> <command>")
 			return
 		}
 		name := args[1]
 		command := strings.Join(args[2:], " ")
-		createOrUpdateRule(name, command)
+		updateRule(name, command)
 	case "-ln":
 		if len(args) != 2 {
-			fmt.Println("Error: Incorrect usage of -ln. It should be: ./baby -ln <name>")
+			fmt.Println("Error: Incorrect usage of -ln. It should be: baby -ln <name>")
 			return
 		}
 		name := args[1]
@@ -61,7 +61,7 @@ func main() {
 		fmt.Println("Baby version 1.0")
 	default:
 		if strings.HasPrefix(args[0], "-") {
-			fmt.Println("Unrecognized option. Use ./baby -h to see the available options.")
+			fmt.Println("Unrecognized option. Use baby -h to see the available options.")
 		} else {
 			runCommands(args)
 		}
@@ -81,6 +81,7 @@ func showHelp() {
 	fmt.Println("-v\t\t\tShow the program version")
 	fmt.Println("Usage examples:")
 	fmt.Println("Create a new rule: baby -n update 'sudo apt update -y'")
+	fmt.Println("Then run 'baby update'")
 }
 
 func listRules() {
@@ -115,41 +116,26 @@ func listRules() {
 	}
 }
 
-func createOrUpdateRule(name, command string) {
+func createRule(name, command string) {
 	lines, err := readLines(configFile)
 	if err != nil {
 		fmt.Println("Error reading the configuration file:", err)
 		return
 	}
 
-	// Check if the rule already exists
-	for i, line := range lines {
+	for _, line := range lines {
 		if strings.HasPrefix(line, name+" = ") {
-			// Rule already exists, ask user if they want to overwrite it
-			reader := bufio.NewReader(os.Stdin)
 			fmt.Printf("Rule '%s' already exists. Do you want to overwrite it? (y/n): ", name)
-			answer, _ := reader.ReadString('\n')
-			answer = strings.TrimSpace(answer)
-			if answer == "y" {
-				lines[i] = fmt.Sprintf("%s = %s", name, command)
-				err := writeLines(configFile, lines)
-				if err != nil {
-					fmt.Println("Error writing to the configuration file:", err)
-					return
-				}
-				fmt.Printf("Rule '%s' successfully overwritten.\n", name)
-			} else if answer == "n" {
-				fmt.Println("Installation cancelled by user.")
-				return
-			} else {
-				fmt.Println("Invalid input. Installation cancelled.")
+			var response string
+			fmt.Scanln(&response)
+			if response != "y" {
+				fmt.Println("Operation cancelled.")
 				return
 			}
-			return
+			break
 		}
 	}
 
-	// If rule does not exist, create a new one
 	file, err := os.OpenFile(configFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		fmt.Println("Failed to open the configuration file:", err)
@@ -201,6 +187,35 @@ func deleteAllRules() {
 		return
 	}
 	fmt.Println("All rules have been successfully deleted.")
+}
+
+func updateRule(name, command string) {
+	lines, err := readLines(configFile)
+	if err != nil {
+		fmt.Println("Error reading the configuration file:", err)
+		return
+	}
+
+	found := false
+	for i, line := range lines {
+		if strings.HasPrefix(line, name+" = ") {
+			lines[i] = fmt.Sprintf("%s = %s", name, command)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		fmt.Printf("Rule '%s' not found.\n", name)
+		return
+	}
+
+	err = writeLines(configFile, lines)
+	if err != nil {
+		fmt.Println("Error writing to the configuration file:", err)
+		return
+	}
+	fmt.Printf("Rule '%s' successfully updated.\n", name)
 }
 
 func showRule(name string) {
