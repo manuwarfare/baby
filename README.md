@@ -31,6 +31,9 @@ First step after install the program is run `baby -h` to know about how the scri
 
   `baby -n ssh "ssh user@example.com"` will connect to your SSH server only typing `baby ssh`
 
+  Running a block of rules is as easy as run `baby <name1> <name2>`. This command will run two rules continuously but you can set as many as your implementation let.
+  
+
 :pencil: **LISTING RULES**
 
 There are two options to list the rules stored in baby.conf file.
