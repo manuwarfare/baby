@@ -70,6 +70,7 @@ func main() {
 
 func showHelp() {
 	fmt.Println("Usage: baby <option>")
+	fmt.Println(" ")
 	fmt.Println("Available options:")
 	fmt.Println("-l\t\t\tList stored rules")
 	fmt.Println("-n <name> <command>\tCreate a new rule")
@@ -82,6 +83,9 @@ func showHelp() {
 	fmt.Println("Usage examples:")
 	fmt.Println("Create a new rule: baby -n update 'sudo apt update -y'")
 	fmt.Println("Then run 'baby update'")
+	fmt.Println(" ")
+	fmt.Println("For further help go to https://github.com/manuwarfare/baby")
+	fmt.Println("Created by: Manuel Guerra")
 }
 
 func listRules() {
