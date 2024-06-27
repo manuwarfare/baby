@@ -19,12 +19,15 @@ If you preffer to compile yourself the source code you need to download the _mai
 To install Golang in your system run
 
   `sudo dnf golang` or `sudo apt golang` depending on your GNU/Linux distribution.
+  
 
 :pencil: **CREATING RULES**
 
 First step after install the program is run `baby -h` to know about how the script functions. Some examples to create rules in a Fedora system terminal:
 
   `baby -n update "sudo dnf update -y && sudo dnf upgrade -y"` this long command will run after with only type `baby update`.
+
+  `baby -n ssh "ssh user@example.com"` will connect to your SSH server only typing `baby ssh`
 
 :pencil: **LISTING RULES**
 
