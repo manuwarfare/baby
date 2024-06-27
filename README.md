@@ -52,6 +52,8 @@ There are two options to list the rules stored in baby.conf file.
 
 🟢 Elementary OS
 
+🟢 Debian
+
 🟢 Linux Mint
 
 🟢 MX Linux
