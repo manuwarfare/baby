@@ -6,7 +6,7 @@ You can easily set rules, delete them, list them and update them with a clear li
 
 Go to release section and download the latest version, in that page you can find the installation instructions for the binary files.
 
-  🔗 ![Download the latest version](https://github.com/manuwarfare/baby/latest-release)
+  🔗 [Download the latest version](https://github.com/manuwarfare/baby/releases/latest)
 
 :white_check_mark: **COMPILE YOURSELF**
 
