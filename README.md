@@ -29,10 +29,17 @@ First step after install the program is run `baby -h` to know about how the scri
 # 🤖 **TESTED ON**
 
 🟢 Elementary OS
+
 🟢 Linux Mint
+
 🟢 MX Linux
+
 🟢 Fedora
+
 🟢 AlmaLinux
+
 🟢 Zorin OS
+
 🟢 Endeavour OS
+
 
