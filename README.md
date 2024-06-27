@@ -8,17 +8,17 @@ Go to release section and download the latest version, in that page you can find
 
 :white_check_mark: **COMPILE YOURSELF**
 
-To compile yourself the source code you need to download the _main.go_ file and create a file named _baby.conf_, then run the following commands:
+If you preffer to compile yourself the source code you need to download the _main.go_ file and create a file named _baby.conf_, then run the following commands:
 
 `go mod init baby`
 
 `go build -o baby`
 
-Previous requirements to compile: golang ('gcc-go', 'golang-bin')
+**Previous requirements to compile:** golang ('gcc-go', 'golang-bin')
 
 To install Golang in your system run
 
-`sudo dnf golang` or `sudo apt golang` depending on your GNU/Linux distribution.
+  `sudo dnf golang` or `sudo apt golang` depending on your GNU/Linux distribution.
 
 :pencil: **CREATING RULES**
 
