@@ -2,6 +2,21 @@
 Baby comes as an option to the default "alias" command and it's a simple program to abbreviate long prompts in GNU/Linux terminal.
 You can easily set rules, delete them, list them and update them with a clear list of parameters.
 
+⭐ **FEATURES**
+
+* Simplify your long commands in terminal
+
+* Improve your times at making repetitive tasks
+
+* You don't need to open any config file
+
+* Store, list, update and delete rules
+
+* Run a block of rules easy
+
+* Coming soon: import rules from a public repository for a specific GNU/Linux distro
+  
+
 :white_check_mark: **INSTALLATION**
 
 Go to release section and download the latest version, in that page you can find the installation instructions for the binary files.
