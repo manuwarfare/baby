@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const configFile = "/usr/local/bin/baby.conf"
+const configFile = "/etc/baby.conf"
 
 func main() {
 	args := os.Args[1:]
@@ -81,11 +81,12 @@ func showHelp() {
 	fmt.Println("-h\t\t\tShow this help")
 	fmt.Println("-v\t\t\tShow the program version")
 	fmt.Println("Usage examples:")
-	fmt.Println("Create a new rule: baby -n update 'sudo apt update -y'")
-	fmt.Println("Then run 'baby update'")
+	fmt.Println("Create a new rule: sudo baby -n update 'sudo apt update -y'")
+	fmt.Println("Then just run 'baby update'")
 	fmt.Println(" ")
 	fmt.Println("For further help go to https://github.com/manuwarfare/baby")
-	fmt.Println("Created by: Manuel Guerra")
+	fmt.Println("Author: Manuel Guerra")
+	fmt.Println("V 1.0 | This software is licensed under the GNU GPLv3")
 }
 
 func listRules() {
