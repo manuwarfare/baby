@@ -42,9 +42,9 @@ To install Golang in your system run
 
 First step after install the program is run `baby -h` to know about how the script functions. Some examples to create rules in a Fedora system terminal:
 
-  `baby -n update "sudo dnf update -y && sudo dnf upgrade -y"` this long command will run after with only type `baby update`.
+  `sudo baby -n update "sudo dnf update -y && sudo dnf upgrade -y"` this long command will run after with only type `baby update`.
 
-  `baby -n ssh "ssh user@example.com"` will connect to your SSH server only typing `baby ssh`
+  `sudo baby -n ssh "ssh user@example.com"` will connect to your SSH server only typing `baby ssh`
 
   Running a block of rules is as easy as run `baby <name1> <name2>`. This command will run two rules continuously but you can set as many as your implementation let.
   
