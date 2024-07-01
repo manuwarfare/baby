@@ -35,7 +35,7 @@ If you preffer to compile yourself the source code you need to download the _mai
 
 To install Golang in your system run
 
-  `sudo dnf golang` or `sudo apt golang` depending on your GNU/Linux distribution.
+  `sudo dnf install golang` or `sudo apt install golang` depending on your GNU/Linux distribution.
   
 
 :pencil: **CREATING RULES**
