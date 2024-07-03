@@ -1,0 +1,57 @@
+.TH BABY 1 "June 2024" "Version 1.0" "Baby Manual"
+.SH NAME
+baby \- Abbreviator for long commands in linux terminal
+.SH SYNOPSIS
+.B baby
+[action] [options] [packages] ...
+.SH DESCRIPTION
+.B Baby
+comes as an option to the default "alias" command and it's a simple program to abbreviate long prompts in GNU/Linux terminal. You can easily set rules, delete them, list them and update them with a clear list of parameters. It should be functional in any GNU/Linux distribution.
+.SH OPTIONS
+.TP
+.B \-l
+List stored rules
+.TP
+.B \-n <name> <command>
+Create a new rule
+.TP
+.B \-r <name>
+Delete an existing rule
+.TP
+.B \-r a
+Delete all rules
+.TP
+.B \-c <name> <command>
+Update the command of a rule
+.TP
+.B \-ln <name>
+Show the contents of a specific rule
+.TP
+.B \-h
+Show this help
+.TP
+.B \-v
+Show the program version
+.SH USAGE EXAMPLES
+Create a new rule:
+.B baby -n update 'sudo apt update -y'
+.P
+Then run 'baby update'
+.SH BUGS
+Baby does not have any locking mechanisms yet. (Running several Lintian processes on the same laboratory simultaneously is likely to fail or corrupt the laboratory.)
+.P
+If you discover any other bugs in baby, please contact the authors.
+.SH SEE ALSO
+.B baby-info(1),
+Lintian User Manual (/usr/share/doc/baby/baby.1).
+.P
+Packaging tools:
+.B debhelper(7),
+.B dh_make(8),
+.B dpkg-buildpackage(1).
+.SH AUTHORS
+Manuel Guerra <manuelguerraf@protonmail.com>
+.P
+Please use the email address <manuelguerraf@protonmail.com> for Baby related comments.
+.SH COPYRIGHT
+2024-06-24 Baby v1.0
