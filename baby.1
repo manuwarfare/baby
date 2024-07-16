@@ -1,57 +1,84 @@
-.TH BABY 1 "June 2024" "Version 1.0" "Baby Manual"
+.TH BABY 1 "June 2024" "Version 1.0" "Baby"
 .SH NAME
-baby \- Abbreviator for long commands in linux terminal
+baby \- Abbreviator for long commands in Linux terminal
 .SH SYNOPSIS
 .B baby
-[action] [options] [packages] ...
+[\fIoptions\fP] [\fIusage\fP] ...
 .SH DESCRIPTION
 .B Baby
-comes as an option to the default "alias" command and it's a simple program to abbreviate long prompts in GNU/Linux terminal. You can easily set rules, delete them, list them and update them with a clear list of parameters. It should be functional in any GNU/Linux distribution.
+comes as an alternative to the default "alias" command. It's a simple program designed to abbreviate long prompts in the GNU/Linux terminal. You can easily set rules, delete them, list them, and update them with a clear set of parameters. It should be functional in any GNU/Linux distribution.
 .SH OPTIONS
 .TP
 .B \-l
-List stored rules
+List stored rules.
 .TP
-.B \-n <name> <command>
-Create a new rule
+.B \-n \fI<name> <command>\fP
+Create a new rule with the specified \fIname\fP and \fIcommand\fP.
 .TP
-.B \-r <name>
-Delete an existing rule
+.B \-i
+Import rules from a url or local file.
+.TP
+.B \-e
+Export rules to a file.
+.TP
+.B \-r \fI<name>\fP
+Delete an existing rule by \fIname\fP.
 .TP
 .B \-r a
-Delete all rules
+Delete all rules.
 .TP
-.B \-c <name> <command>
-Update the command of a rule
+.B \-c \fI<name> <command\fP>
+Update the command of an existing rule specified by \fIname\fP.
 .TP
-.B \-ln <name>
-Show the contents of a specific rule
+.B \-ln \fI<name>\fP
+Show the contents of a specific rule by \fIname\fP.
 .TP
 .B \-h
-Show this help
+Show this help message.
 .TP
 .B \-v
-Show the program version
+Show the program version.
 .SH USAGE EXAMPLES
 Create a new rule:
-.B baby -n update 'sudo apt update -y'
+.B baby \-n update 'sudo apt update -y'
 .P
-Then run 'baby update'
+Then run 'baby update'.
 .SH BUGS
-Baby does not have any locking mechanisms yet. (Running several Lintian processes on the same laboratory simultaneously is likely to fail or corrupt the laboratory.)
+.B Baby
+does not have any locking mechanisms yet.
 .P
-If you discover any other bugs in baby, please contact the authors.
+If you discover any other bugs in \fBbaby\fP, please contact the authors.
 .SH SEE ALSO
 .B baby-info(1),
-Lintian User Manual (/usr/share/doc/baby/baby.1).
+.B Baby User Manual
+(/usr/share/doc/baby/baby.1).
 .P
 Packaging tools:
 .B debhelper(7),
 .B dh_make(8),
 .B dpkg-buildpackage(1).
 .SH AUTHORS
-Manuel Guerra <manuelguerraf@protonmail.com>
+Originally written by Manuel Guerra <ar.manuelguerra@gmail.com>.
 .P
-Please use the email address <manuelguerraf@protonmail.com> for Baby related comments.
+Please use the email address <ar.manuelguerra@gmail.com> for Baby-related comments.
 .SH COPYRIGHT
-2024-06-24 Baby v1.0
+Copyright © 2024 Manuel Guerra
+.P
+License: GPL-3+
+.PP
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+.PP
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+.PP
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+.PP
+On Debian systems, the complete text of the GNU General
+Public License version 3 can be found in `/usr/share/common-licenses/GPL-3'.
+
