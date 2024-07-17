@@ -16,7 +16,7 @@ import (
 )
 
 const (
-    configDir = "/.baby/config/"
+    configDir = "/.config/baby/"
     configFileName = "baby.conf"
 )
 
@@ -100,15 +100,16 @@ func showHelp() {
 	fmt.Println(" ")
 	fmt.Println("Available options:")
 	fmt.Println(" -l\t\t\tList stored rules")
-	fmt.Println(" -n <name> <command>\tCreate a new rule")
+	fmt.Println(" -n <name> '<command>'\tCreate a new rule")
 	fmt.Println(" -r <name> [<name>...]\tDelete existing rules")
 	fmt.Println(" -r a \t\t\tDelete all rules")
-	fmt.Println(" -c <name> <command>\tUpdate the command of a rule")
+	fmt.Println(" -c <name> '<command>'\tUpdate the command of a rule")
 	fmt.Println(" -ln <name>\t\tShow the contents of a specific rule")
 	fmt.Println(" -h\t\t\tShow this help")
 	fmt.Println(" -v\t\t\tShow the program version")
-	fmt.Println(" -i <url or path>\tImport rules from a URL")
+	fmt.Println(" -i <url or path>\tImport rules from a URL or file")
 	fmt.Println(" -e\t\t\tExport rules to a text file")
+	fmt.Println(" ")
 	fmt.Println("Usage examples:")
 	fmt.Println("Create a new rule: baby -n update 'sudo apt update -y'")
 	fmt.Println("The next time just run: 'baby update'")
