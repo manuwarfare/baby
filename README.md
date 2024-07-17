@@ -12,13 +12,13 @@ You can easily set rules, delete them, list them and update them with a clear li
 
 * Store, list, update and delete rules
 
-* Run a block of rules easy
+* Run your rules in bulk, i.e. `baby <rule1> <rule2>`
 
-* Impor rules from a URL
+* Import rules from a URL
 
 * Import rules from a local file
 
-* Export rules to a local file
+* Backup your rules to a local file
 
 
 :white_check_mark: **PROGRAMMING LANGUAGE**
