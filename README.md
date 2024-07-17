@@ -57,7 +57,7 @@ First step after install the program is run `baby -h` to know about how the scri
 
   `baby -i <URL or path>` will import rules from a URL or a local file.
 
-  Your URL must to point to a file extension, i.e: .txt
+  Your URL must to point to a file extension, i.e: .txt, .md, .html, etc.
 
   The stored rules must follow this sintaxis: `b:<rule> = <command>:b`
 
