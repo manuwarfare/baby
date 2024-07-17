@@ -58,7 +58,7 @@ func main() {
 		}
 	case "-c":
 		if len(args) < 3 {
-			fmt.Println("Error: Incorrect usage of -c. It should be: baby -c <name> <command>")
+			fmt.Println("Error: Incorrect usage of -c. It should be: baby -c <name> '<command>'")
 			return
 		}
 		name := args[1]
