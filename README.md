@@ -20,6 +20,8 @@ You can easily set rules, delete them, list them and update them with a clear li
 
 * Backup your rules to a local file
 
+* Feeding bottles (adding variables inside a command)
+
 
 :white_check_mark: **PROGRAMMING LANGUAGE**
 
@@ -78,6 +80,21 @@ There are two options to list the rules stored in baby.conf file.
   `baby -r <name>` will remove an specific rule.
 
   `baby -r a` will remove all rules stored in baby.conf.
+
+:pencil: **FEEDING BOTTLES**
+
+  The feeding bottles help you adding a variable inside a command. Use only one bottle for command.
+
+  The feeding bottle sintaxis is this `b%('bottle_name')%b` and you can add it into any part of the command.
+
+  Usage examples: `baby -n ssh "ssh b%('ssh username')%b@example.com"`
+
+  Execute the rule with: `baby ssh` and the system will prompt this:
+
+  _The ssh username is?:_
+
+  If the credentials are valid, you will get connection via ssh to example.com.
+
 
 # 🤖 **TESTED ON**
 

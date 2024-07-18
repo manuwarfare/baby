@@ -286,29 +286,30 @@ func showRule(name string) {
 }
 
 func runCommands(commands []string) {
-	var commandList []string
+    var commandList []string
 
-	for _, cmd := range commands {
-		rule, err := getCommand(cmd)
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-			continue
-		}
-		commandList = append(commandList, rule)
-	}
+    for _, cmd := range commands {
+        rule, err := getCommand(cmd)
+        if err != nil {
+            fmt.Printf("Error: %s\n", err)
+            continue
+        }
+        processedRule := processBottles(rule)
+        commandList = append(commandList, processedRule)
+    }
 
-	if len(commandList) == 0 {
-		fmt.Println("No rules found to execute.")
-		return
-	}
+    if len(commandList) == 0 {
+        fmt.Println("No rules found to execute.")
+        return
+    }
 
-	fullCommand := strings.Join(commandList, " && ")
-	fmt.Println("Executing:", fullCommand)
+    fullCommand := strings.Join(commandList, " && ")
+    fmt.Println("Executing:", fullCommand)
 
-	err := executeCommand(fullCommand)
-	if err != nil {
-		fmt.Printf("Error executing commands: %s\n", err)
-	}
+    err := executeCommand(fullCommand)
+    if err != nil {
+        fmt.Printf("Error executing commands: %s\n", err)
+    }
 }
 
 func getCommand(name string) (string, error) {
@@ -639,6 +640,17 @@ func executeCommand(command string) error {
 		return fmt.Errorf("failed to execute command: %v", err)
 	}
 	return nil
+}
+
+func processBottles(command string) string {
+    re := regexp.MustCompile(`b%\('([^']+)'\)%b`)
+    return re.ReplaceAllStringFunc(command, func(match string) string {
+        bottleName := re.FindStringSubmatch(match)[1]
+        fmt.Printf("The %s is?: ", bottleName)
+        var value string
+        fmt.Scanln(&value)
+        return value
+    })
 }
 
 func readLines(filename string) ([]string, error) {
