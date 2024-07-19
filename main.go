@@ -23,76 +23,93 @@ const (
 var configFile = filepath.Join(os.Getenv("HOME"), configDir, configFileName)
 
 func main() {
-	args := os.Args[1:]
+    args := os.Args[1:]
 
-	if len(args) == 0 {
-		showHelp()
-		return
-	}
+    bottleValues := make(map[string]string)
+    var commands []string
 
-	switch args[0] {
-	case "-h":
-		showHelp()
-	case "-l":
-		listRules()
-	case "-n":
-		if len(args) < 3 {
-			fmt.Println("Error: Incorrect usage of -n. It should be: baby -n <name> <command>")
-			return
-		}
-		name := args[1]
-		command := strings.Join(args[2:], " ")
-		createRule(name, command)
-	case "-r":
-		if len(args) == 1 {
-			fmt.Println("Error: Incorrect usage of -r. It should be: baby -r <name> [<name>...] or baby -r a")
-			return
-		}
-		names := args[1:]
-		if len(names) == 1 && names[0] == "a" {
-			deleteAllRules()
-		} else {
-			for _, name := range names {
-				deleteRule(name)
-			}
-		}
-	case "-c":
-		if len(args) < 3 {
-			fmt.Println("Error: Incorrect usage of -c. It should be: baby -c <name> '<command>'")
-			return
-		}
-		name := args[1]
-		command := strings.Join(args[2:], " ")
-		updateRule(name, command)
-	case "-ln":
-		if len(args) != 2 {
-			fmt.Println("Error: Incorrect usage of -ln. It should be: baby -ln <name>")
-			return
-		}
-		name := args[1]
-		showRule(name)
-	case "-v":
-		fmt.Println("Baby version 1.0")
-	case "-i":
-        if len(args) != 2 {
+    for i := 0; i < len(args); i++ {
+        if strings.HasPrefix(args[i], "-b=") {
+            parts := strings.SplitN(args[i], "=", 2)
+            if len(parts) == 2 {
+                bottleParts := strings.SplitN(parts[1], ":", 2)
+                if len(bottleParts) == 2 {
+                    bottleValues[bottleParts[0]] = bottleParts[1]
+                }
+            }
+        } else {
+            commands = append(commands, args[i])
+        }
+    }
+
+    if len(commands) == 0 {
+        showHelp()
+        return
+    }
+
+    switch commands[0] {
+    case "-h":
+        showHelp()
+    case "-l":
+        listRules()
+    case "-n":
+        if len(commands) < 3 {
+            fmt.Println("Error: Incorrect usage of -n. It should be: baby -n <name> <command>")
+            return
+        }
+        name := commands[1]
+        command := strings.Join(commands[2:], " ")
+        createRule(name, command)
+    case "-r":
+        if len(commands) == 1 {
+            fmt.Println("Error: Incorrect usage of -r. It should be: baby -r <name> [<name>...] or baby -r a")
+            return
+        }
+        names := commands[1:]
+        if len(names) == 1 && names[0] == "a" {
+            deleteAllRules()
+        } else {
+            for _, name := range names {
+                deleteRule(name)
+            }
+        }
+    case "-c":
+        if len(commands) < 3 {
+            fmt.Println("Error: Incorrect usage of -c. It should be: baby -c <name> '<command>'")
+            return
+        }
+        name := commands[1]
+        command := strings.Join(commands[2:], " ")
+        updateRule(name, command)
+    case "-ln":
+        if len(commands) != 2 {
+            fmt.Println("Error: Incorrect usage of -ln. It should be: baby -ln <name>")
+            return
+        }
+        name := commands[1]
+        showRule(name)
+    case "-v":
+        fmt.Println("Baby version 1.0")
+    case "-i":
+        if len(commands) != 2 {
             fmt.Println("Error: Incorrect usage of -i. It should be: baby -i <url or file path>")
             return
         }
-        importSource := args[1]
+        importSource := commands[1]
         if strings.HasPrefix(importSource, "http://") || strings.HasPrefix(importSource, "https://") {
             importRulesFromURL(importSource)
         } else {
             importRulesFromFile(importSource)
         }
-	case "-e":
-		exportRules()
-	default:
-		if strings.HasPrefix(args[0], "-") {
-			fmt.Println("Unrecognized option. Use baby -h to see the available options.")
-		} else {
-			runCommands(args)
-		}
-	}
+    case "-e":
+        exportRules()
+    default:
+        if strings.HasPrefix(commands[0], "-") {
+            fmt.Println("Unrecognized option. Use baby -h to see the available options.")
+        } else {
+            runCommands(commands, bottleValues)
+        }
+    }
 }
 
 func showHelp() {
@@ -109,6 +126,7 @@ func showHelp() {
 	fmt.Println(" -v\t\t\tShow the program version")
 	fmt.Println(" -i <url or path>\tImport rules from a URL or file")
 	fmt.Println(" -e\t\t\tExport rules to a text file")
+	fmt.Println(" -b=<variable:value>\tPredefine the content of a bottle")
 	fmt.Println(" ")
 	fmt.Println("Usage examples:")
 	fmt.Println("Create a new rule: baby -n update 'sudo apt update -y'")
@@ -285,8 +303,8 @@ func showRule(name string) {
 	}
 }
 
-func runCommands(commands []string) {
-    var commandList []string
+func runCommands(commands []string, bottleValues map[string]string) {
+    var processedCommands []string
 
     for _, cmd := range commands {
         rule, err := getCommand(cmd)
@@ -294,21 +312,22 @@ func runCommands(commands []string) {
             fmt.Printf("Error: %s\n", err)
             continue
         }
-        processedRule := processBottles(rule)
-        commandList = append(commandList, processedRule)
+        processedRule := processBottles(rule, bottleValues)
+        processedCommands = append(processedCommands, processedRule)
     }
 
-    if len(commandList) == 0 {
+    if len(processedCommands) == 0 {
         fmt.Println("No rules found to execute.")
         return
     }
 
-    fullCommand := strings.Join(commandList, " && ")
-    fmt.Println("Executing:", fullCommand)
-
-    err := executeCommand(fullCommand)
-    if err != nil {
-        fmt.Printf("Error executing commands: %s\n", err)
+    for i, command := range processedCommands {
+        fmt.Printf("Executing command %d: %s\n", i+1, command)
+        err := executeCommand(command)
+        if err != nil {
+            fmt.Printf("Error executing command %d: %s\n", i+1, err)
+            // Continue with the next command instead of stopping
+        }
     }
 }
 
@@ -630,22 +649,28 @@ func writeToFile(filePath string, content []string) error {
 }
 
 func executeCommand(command string) error {
-	cmd := exec.Command("bash", "-c", command)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
+    cmd := exec.Command("bash", "-c", command)
+    cmd.Stdout = os.Stdout
+    cmd.Stderr = os.Stderr
+    cmd.Stdin = os.Stdin
 
-	err := cmd.Run()
-	if err != nil {
-		return fmt.Errorf("failed to execute command: %v", err)
-	}
-	return nil
+    err := cmd.Run()
+    if err != nil {
+        if exitError, ok := err.(*exec.ExitError); ok {
+            return fmt.Errorf("command failed with exit code %d: %v", exitError.ExitCode(), err)
+        }
+        return fmt.Errorf("failed to execute command: %v", err)
+    }
+    return nil
 }
 
-func processBottles(command string) string {
+func processBottles(command string, bottleValues map[string]string) string {
     re := regexp.MustCompile(`b%\('([^']+)'\)%b`)
     return re.ReplaceAllStringFunc(command, func(match string) string {
         bottleName := re.FindStringSubmatch(match)[1]
+        if value, ok := bottleValues[bottleName]; ok {
+            return value
+        }
         fmt.Printf("The %s is?: ", bottleName)
         var value string
         fmt.Scanln(&value)

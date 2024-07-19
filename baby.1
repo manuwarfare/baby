@@ -15,11 +15,14 @@ List stored rules.
 .B \-n \fI<name> <command>\fP
 Create a new rule with the specified \fIname\fP and \fIcommand\fP.
 .TP
-.B \-i
+.B \-i \fI<url> or <path>\fP
 Import rules from a url or local file.
 .TP
 .B \-e
 Export rules to a file.
+.TP
+.B \-b=\fI<variable:value>\fP
+Predefine the value of a bottle.
 .TP
 .B \-r \fI<name>\fP
 Delete an existing rule by \fIname\fP.
@@ -40,9 +43,13 @@ Show this help message.
 Show the program version.
 .SH USAGE EXAMPLES
 Create a new rule:
-.B baby \-n update 'sudo apt update -y'
+.B baby \-n update "sudo apt update -y"
 .P
-Then run 'baby update'.
+Then run:
+.B baby update
+.P
+Syntax for feeding bottles:
+.B b%('variable')%b
 .SH BUGS
 .B Baby
 does not have any locking mechanisms yet.

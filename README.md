@@ -61,7 +61,7 @@ First step after install the program is run `baby -h` to know about how the scri
 
   Your URL must to point to a file extension, i.e: .txt, .md, .html, etc.
 
-  The stored rules must follow this sintaxis: `b:<rule> = <command>:b`
+  The stored rules must follow this syntax: `b:<rule> = <command>:b`
 
 :pencil: **EXPORTING RULES**
 
@@ -85,15 +85,21 @@ There are two options to list the rules stored in baby.conf file.
 
   The feeding bottles help you adding a variable inside a command. Use only one bottle for command.
 
-  The feeding bottle sintaxis is this `b%('bottle_name')%b` and you can add it into any part of the command.
+  The feeding bottle syntax is this `b%('bottle_name')%b` and you can add it into any part of the command.
 
-  Usage examples: `baby -n ssh "ssh b%('ssh username')%b@example.com"`
+  Usage examples: `baby -n ssh "ssh -p 2222 b%('username')%b@example.com"`
 
   Execute the rule with: `baby ssh` and the system will prompt this:
 
-  _The ssh username is?:_
+  _The username is?:_
 
-  If the credentials are valid, you will get connection via ssh to example.com.
+  If the credentials are valid, you will get connection via ssh to *example.com*.
+
+  You can also predefine the value of a bottle at any time, this value will be automatically applied to all the rules when you run them in bulk, to do this use the next argument `-b=<variable:value>`.
+
+  Usage examples: `baby -b=username:user1 ssh`
+
+  This will run the next command: `ssh -p 2222 user1@example.com`
 
 
 # 🤖 **TESTED ON**
