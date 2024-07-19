@@ -89,7 +89,7 @@ func main() {
         name := commands[1]
         showRule(name)
     case "-v":
-        fmt.Println("Baby version 1.0")
+        fmt.Println("Baby version 1.0.49")
     case "-i":
         if len(commands) != 2 {
             fmt.Println("Error: Incorrect usage of -i. It should be: baby -i <url or file path>")
@@ -116,25 +116,29 @@ func showHelp() {
 	fmt.Println("Usage: baby <option>")
 	fmt.Println(" ")
 	fmt.Println("Available options:")
-	fmt.Println(" -l\t\t\tList stored rules")
 	fmt.Println(" -n <name> '<command>'\tCreate a new rule")
+	fmt.Println(" -l\t\t\tList stored rules")
 	fmt.Println(" -r <name> [<name>...]\tDelete existing rules")
 	fmt.Println(" -r a \t\t\tDelete all rules")
 	fmt.Println(" -c <name> '<command>'\tUpdate the command of a rule")
 	fmt.Println(" -ln <name>\t\tShow the contents of a specific rule")
 	fmt.Println(" -h\t\t\tShow this help")
 	fmt.Println(" -v\t\t\tShow the program version")
-	fmt.Println(" -i <url or path>\tImport rules from a URL or file")
-	fmt.Println(" -e\t\t\tExport rules to a text file")
-	fmt.Println(" -b=<variable:value>\tPredefine the content of a bottle")
+	fmt.Println(" -i <url or path>\tImport rules from a URL or a local file")
+	fmt.Println(" -e\t\t\tExport rules to a text file (backup)")
+	fmt.Println(" -b=<variable:value>\tPre-define the content of a bottle")
+	fmt.Println("\t\t\tSyntax for create bottles: b%('variable')%b")
 	fmt.Println(" ")
 	fmt.Println("Usage examples:")
-	fmt.Println("Create a new rule: baby -n update 'sudo apt update -y'")
-	fmt.Println("The next time just run: 'baby update'")
+	fmt.Println(" Create a new rule: baby -n update 'sudo apt update -y'")
+	fmt.Println(" The next time just run: baby update")
+	fmt.Println(" ")
+	fmt.Println(" Create a new rule with bottle: baby -n ssh 'ssh -p 2222 b%('username')%b@example.com'")
+	fmt.Println(" The next time you run 'baby ssh' the system will ask you for the username value")
 	fmt.Println(" ")
 	fmt.Println("For further help go to https://github.com/manuwarfare/baby")
 	fmt.Println("Author: Manuel Guerra")
-	fmt.Println("V 1.0 | This software is licensed under the GNU GPLv3")
+	fmt.Println("V 1.0.49 | This software is licensed under the GNU GPLv3")
 }
 
 func listRules() {
