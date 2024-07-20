@@ -89,7 +89,7 @@ func main() {
         name := commands[1]
         showRule(name)
     case "-v":
-        fmt.Println("Baby version 1.0.49")
+        fmt.Println("Baby version 1.0.50")
     case "-i":
         if len(commands) != 2 {
             fmt.Println("Error: Incorrect usage of -i. It should be: baby -i <url or file path>")
@@ -138,7 +138,7 @@ func showHelp() {
 	fmt.Println(" ")
 	fmt.Println("For further help go to https://github.com/manuwarfare/baby")
 	fmt.Println("Author: Manuel Guerra")
-	fmt.Println("V 1.0.49 | This software is licensed under the GNU GPLv3")
+	fmt.Println("V 1.0.50 | This software is licensed under the GNU GPLv3")
 }
 
 func listRules() {
