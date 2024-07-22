@@ -30,13 +30,15 @@ Baby is completly writen in Golang.
 
 :ballot_box_with_check: **COMPILE YOURSELF**
 
-If you preffer to compile yourself the source code you need to download the _main.go_ file and create a file named _baby.conf_ in ~.config/baby/, then run the following commands:
+If you preffer to compile yourself the source code you need to clone this repo and create a file named _baby.conf_ in ~/.config/baby/
 
-`go mod init baby`
+`git clone https://github.com/manuwarfare/baby.git`
 
-`go mod tidy`
+`cd baby`
 
 `go build -o baby`
+
+`sudo cp baby /usr/bin/`
 
 **Previous requirements to compile:** golang ('gcc-go', 'golang-bin')
 
