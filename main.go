@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/net/html"
 )
@@ -18,9 +20,18 @@ import (
 const (
     configDir = "/.config/baby/"
     configFileName = "baby.conf"
+    logDir = "/.local/share/baby/"
+    logFileName = "baby.log"
+    VERSION = "1.0.51"
 )
 
 var configFile = filepath.Join(os.Getenv("HOME"), configDir, configFileName)
+
+var reservedNames = []string{
+    "-h", "-l", "-n", "-r", "-c", "-ln", "-v", "-i", "-e", "-b",
+    "-H", "-L", "-N", "-R", "-C", "-LN", "-V", "-I", "-E", "-B",
+    "-lN", "-Ln",
+}
 
 func main() {
     args := os.Args[1:]
@@ -54,7 +65,7 @@ func main() {
         listRules()
     case "-n":
         if len(commands) < 3 {
-            fmt.Println("Error: Incorrect usage of -n. It should be: baby -n <name> <command>")
+            fmt.Println("Error: Incorrect usage of -n. It should be: baby -n <name> '<command>'")
             return
         }
         name := commands[1]
@@ -89,7 +100,7 @@ func main() {
         name := commands[1]
         showRule(name)
     case "-v":
-        fmt.Println("Baby version 1.0.50")
+        fmt.Println("Baby version", VERSION)
     case "-i":
         if len(commands) != 2 {
             fmt.Println("Error: Incorrect usage of -i. It should be: baby -i <url or file path>")
@@ -138,7 +149,7 @@ func showHelp() {
 	fmt.Println(" ")
 	fmt.Println("For further help go to https://github.com/manuwarfare/baby")
 	fmt.Println("Author: Manuel Guerra")
-	fmt.Println("V 1.0.50 | This software is licensed under the GNU GPLv3")
+	fmt.Printf("V %s | This software is licensed under the GNU GPLv3\n", VERSION)
 }
 
 func listRules() {
@@ -180,6 +191,11 @@ func createRule(name, command string) {
 		return
 	}
 
+	if isReservedName(name) {
+        fmt.Printf("Unable to create a rule with this name. '%s' is a reserved command name.\n", name)
+        return
+    }
+
 	found := false
 	for i, line := range lines {
 		if strings.HasPrefix(line, name+" = ") {
@@ -205,6 +221,12 @@ func createRule(name, command string) {
 		fmt.Println("Error writing to the configuration file:", err)
 		return
 	}
+
+	// write the events in baby.log
+	err = logEvent("CREATE_RULE", fmt.Sprintf("Name: %s, Command: %s", name, command))
+    if err != nil {
+        fmt.Printf("Warning: Failed to log event: %v\n", err)
+    }
 
 	fmt.Printf("Rule '%s' successfully added.\n", name)
 }
@@ -235,6 +257,13 @@ func deleteRule(name string) {
 		fmt.Println("Error writing to the configuration file:", err)
 		return
 	}
+
+	// write events in baby.log
+	err = logEvent("DELETE_RULE", fmt.Sprintf("Name: %s", name))
+    if err != nil {
+        fmt.Printf("Warning: Failed to log event: %v\n", err)
+    }
+
 	fmt.Printf("Rule '%s' successfully deleted.\n", name)
 }
 
@@ -261,6 +290,11 @@ func updateRule(name, command string) {
 		return
 	}
 
+	if isReservedName(name) {
+		fmt.Printf("Unable to update rule. '%s' is a reserved command name.\n", name)
+		return
+	}
+
 	found := false
 	for i, line := range lines {
 		if strings.HasPrefix(line, name+" = ") {
@@ -280,6 +314,13 @@ func updateRule(name, command string) {
 		fmt.Println("Error writing to the configuration file:", err)
 		return
 	}
+
+	// write events in baby.log
+	err = logEvent("UPDATE_RULE", fmt.Sprintf("Name: %s, New Command: %s", name, command))
+    if err != nil {
+        fmt.Printf("Warning: Failed to log event: %v\n", err)
+    }
+
 	fmt.Printf("Rule '%s' successfully updated.\n", name)
 }
 
@@ -309,7 +350,6 @@ func showRule(name string) {
 
 func runCommands(commands []string, bottleValues map[string]string) {
     var processedCommands []string
-
     for _, cmd := range commands {
         rule, err := getCommand(cmd)
         if err != nil {
@@ -319,18 +359,26 @@ func runCommands(commands []string, bottleValues map[string]string) {
         processedRule := processBottles(rule, bottleValues)
         processedCommands = append(processedCommands, processedRule)
     }
-
     if len(processedCommands) == 0 {
         fmt.Println("No rules found to execute.")
         return
     }
-
     for i, command := range processedCommands {
+        start := time.Now()
         fmt.Printf("Executing command %d: %s\n", i+1, command)
         err := executeCommand(command)
+        duration := time.Since(start)
+
+        result := "Success"
         if err != nil {
+            result = fmt.Sprintf("Error: %v", err)
             fmt.Printf("Error executing command %d: %s\n", i+1, err)
-            // Continue with the next command instead of stopping
+        }
+
+        logDetails := fmt.Sprintf("Command: \"%s\", Result: %s in %v", command, result, duration)
+        err = logEvent("EXECUTE_COMMAND", logDetails)
+        if err != nil {
+            fmt.Printf("Warning: Failed to log event: %v\n", err)
         }
     }
 }
@@ -417,9 +465,15 @@ func importRulesFromURL(url string) {
             updateRule(name, command)
         } else {
             createRule(name, command)
-        }
-    }
-}
+
+		// Log the import event
+        err := logEvent("IMPORT_RULE", fmt.Sprintf("From URL: %s, Name: %s, Command: %s", url, name, command))
+        if err != nil {
+            fmt.Printf("Warning: Failed to log event: %v\n", err)
+        		}
+    		}
+		}
+	}
 
 func importRulesFromFile(filePath string) {
     file, err := os.Open(filePath)
@@ -474,9 +528,15 @@ func importRulesFromFile(filePath string) {
             updateRule(name, command)
         } else {
             createRule(name, command)
-        }
-    }
-}
+
+		// Log the import event
+        err := logEvent("IMPORT_RULE", fmt.Sprintf("From File: %s, Name: %s, Command: %s", filePath, name, command))
+        if err != nil {
+            fmt.Printf("Warning: Failed to log event: %v\n", err)
+        		}
+    		}
+		}
+	}
 
 func extractRules(text string) []string {
 	var rules []string
@@ -583,6 +643,14 @@ func exportRules() {
 		}
 
 		fmt.Printf("Rules successfully exported to: %s\n", exportFilePath)
+
+		// Log the export event
+		exportedRules := strings.Join(exportRules, ", ")
+		err = logEvent("EXPORT_RULES", fmt.Sprintf("Exported rules: %s, To file: %s", exportedRules, exportFilePath))
+		if err != nil {
+		fmt.Printf("Warning: Failed to log event: %v\n", err)
+		}
+
 		break
 	}
 }
@@ -718,4 +786,56 @@ func writeLines(filename string, lines []string) error {
 		}
 	}
 	return writer.Flush()
+}
+
+func logEvent(eventType, details string) error {
+    logPath := filepath.Join(os.Getenv("HOME"), logDir, logFileName)
+
+    err := os.MkdirAll(filepath.Dir(logPath), 0755)
+    if err != nil {
+        return fmt.Errorf("failed to create log directory: %v", err)
+    }
+
+    file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    if err != nil {
+        return fmt.Errorf("failed to open log file: %v", err)
+    }
+    defer file.Close()
+
+    user := os.Getenv("USER")
+    timestamp := time.Now().Format("2006-01-24 15:04:05")
+    ip := getIP()
+
+    logMessage := fmt.Sprintf("[%s] %s %s at %s | %s\n", // i.e User:%s
+                              timestamp, eventType, user, ip, details)
+
+    _, err = file.WriteString(logMessage)
+    if err != nil {
+        return fmt.Errorf("failed to write to log file: %v", err)
+    }
+
+    return nil
+}
+
+func getIP() string {
+    addrs, err := net.InterfaceAddrs()
+    if err == nil {
+        for _, addr := range addrs {
+            if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+                if ipnet.IP.To4() != nil {
+                    return ipnet.IP.String()
+                }
+            }
+        }
+    }
+    return "Unknown IP"
+}
+
+func isReservedName(name string) bool {
+    for _, reserved := range reservedNames {
+        if name == reserved {
+            return true
+        }
+    }
+    return false
 }
