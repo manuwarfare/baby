@@ -4,9 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
-	"io"
+    "html"
 	"path/filepath"
 	"os/exec"
 	"regexp"
@@ -14,7 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/html"
+    "golang.org/x/sys/unix"
+
 )
 
 const (
@@ -22,7 +22,7 @@ const (
     configFileName = "baby.conf"
     logDir = "/.local/share/baby/"
     logFileName = "baby.log"
-    VERSION = "1.0.51"
+    VERSION = "1.0.52"
 )
 
 var configFile = filepath.Join(os.Getenv("HOME"), configDir, configFileName)
@@ -103,15 +103,11 @@ func main() {
         fmt.Println("Baby version", VERSION)
     case "-i":
         if len(commands) != 2 {
-            fmt.Println("Error: Incorrect usage of -i. It should be: baby -i <url or file path>")
+            fmt.Println("Error: Incorrect usage of -i. It should be: baby -i <file path>")
             return
         }
         importSource := commands[1]
-        if strings.HasPrefix(importSource, "http://") || strings.HasPrefix(importSource, "https://") {
-            importRulesFromURL(importSource)
-        } else {
-            importRulesFromFile(importSource)
-        }
+        importRulesFromFile(importSource)
     case "-e":
         exportRules()
     default:
@@ -124,147 +120,147 @@ func main() {
 }
 
 func showHelp() {
-	fmt.Println("Usage: baby <option>")
-	fmt.Println(" ")
-	fmt.Println("Available options:")
-	fmt.Println(" -n <name> '<command>'\tCreate a new rule")
-	fmt.Println(" -l\t\t\tList stored rules")
-	fmt.Println(" -r <name> [<name>...]\tDelete existing rules")
-	fmt.Println(" -r a \t\t\tDelete all rules")
-	fmt.Println(" -c <name> '<command>'\tUpdate the command of a rule")
-	fmt.Println(" -ln <name>\t\tShow the contents of a specific rule")
-	fmt.Println(" -h\t\t\tShow this help")
-	fmt.Println(" -v\t\t\tShow the program version")
-	fmt.Println(" -i <url or path>\tImport rules from a URL or a local file")
-	fmt.Println(" -e\t\t\tExport rules to a text file (backup)")
-	fmt.Println(" -b=<variable:value>\tPre-define the content of a bottle")
-	fmt.Println("\t\t\tSyntax for create bottles: b%('variable')%b")
-	fmt.Println(" ")
-	fmt.Println("Usage examples:")
-	fmt.Println(" Create a new rule: baby -n update 'sudo apt update -y'")
-	fmt.Println(" The next time just run: baby update")
-	fmt.Println(" ")
-	fmt.Println(" Create a new rule with bottle: baby -n ssh 'ssh -p 2222 b%('username')%b@example.com'")
-	fmt.Println(" The next time you run 'baby ssh' the system will ask you for the username value")
-	fmt.Println(" ")
-	fmt.Println("For further help go to https://github.com/manuwarfare/baby")
-	fmt.Println("Author: Manuel Guerra")
-	fmt.Printf("V %s | This software is licensed under the GNU GPLv3\n", VERSION)
+    fmt.Println("Usage: baby <option>")
+    fmt.Println(" ")
+    fmt.Println("Available options:")
+    fmt.Println(" -n <name> '<command>'\tCreate a new rule")
+    fmt.Println(" -l\t\t\tList stored rules")
+    fmt.Println(" -r <name> [<name>...]\tDelete existing rules")
+    fmt.Println(" -r a \t\t\tDelete all rules")
+    fmt.Println(" -c <name> '<command>'\tUpdate the command of a rule")
+    fmt.Println(" -ln <name>\t\tShow the contents of a specific rule")
+    fmt.Println(" -h\t\t\tShow this help")
+    fmt.Println(" -v\t\t\tShow the program version")
+    fmt.Println(" -i <file path>\tImport rules from a local file")
+    fmt.Println(" -e\t\t\tExport rules to a text file (backup)")
+    fmt.Println(" -b=<variable:value>\tPre-define the content of a bottle")
+    fmt.Println("\t\t\tSyntax for create bottles: b%('variable')%b")
+    fmt.Println(" ")
+    fmt.Println("Usage examples:")
+    fmt.Println(" Create a new rule: baby -n update 'sudo apt update -y'")
+    fmt.Println(" The next time just run: baby update")
+    fmt.Println(" ")
+    fmt.Println(" Create a new rule with bottle: baby -n ssh 'ssh -p 2222 b%('username')%b@example.com'")
+    fmt.Println(" The next time you run 'baby ssh' the system will ask you for the username value")
+    fmt.Println(" ")
+    fmt.Println("For further help go to https://github.com/manuwarfare/baby")
+    fmt.Println("Author: Manuel Guerra")
+    fmt.Printf("V %s | This software is licensed under the GNU GPLv3\n", VERSION)
 }
 
 func listRules() {
-	file, err := os.Open(configFile)
-	if err != nil {
-		fmt.Println("Failed to open the configuration file:", err)
-		fmt.Println("No rules have been created in Baby yet.")
-		return
-	}
-	defer file.Close()
+    file, err := os.Open(configFile)
+    if err != nil {
+        fmt.Println("Failed to open the configuration file:", err)
+        fmt.Println("No rules have been created in Baby yet.")
+        return
+    }
+    defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	var found bool
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		name := strings.TrimSpace(parts[0])
-		command := strings.TrimSpace(parts[1])
-		fmt.Printf("%s = %s\n", name, command)
-		found = true
-	}
+    scanner := bufio.NewScanner(file)
+    var found bool
+    for scanner.Scan() {
+        line := scanner.Text()
+        parts := strings.SplitN(line, "=", 2)
+        if len(parts) != 2 {
+            continue
+        }
+        name := strings.TrimSpace(parts[0])
+        command := strings.TrimSpace(parts[1])
+        fmt.Printf("%s = %s\n", name, command)
+        found = true
+    }
 
-	if !found {
-		fmt.Println("No rules have been created in Baby yet.")
-	}
+    if !found {
+        fmt.Println("No rules have been created in Baby yet.")
+    }
 
-	if err := scanner.Err(); err != nil {
-		fmt.Println("Error reading the configuration file:", err)
-	}
+    if err := scanner.Err(); err != nil {
+        fmt.Println("Error reading the configuration file:", err)
+    }
 }
 
 func createRule(name, command string) {
-	lines, err := readLines(configFile)
-	if err != nil {
-		fmt.Println("Error reading the configuration file:", err)
-		return
-	}
+    lines, err := readLines(configFile)
+    if err != nil {
+        fmt.Println("Error reading the configuration file:", err)
+        return
+    }
 
-	if isReservedName(name) {
+    if isReservedName(name) {
         fmt.Printf("Unable to create a rule with this name. '%s' is a reserved command name.\n", name)
         return
     }
 
-	found := false
-	for i, line := range lines {
-		if strings.HasPrefix(line, name+" = ") {
-			fmt.Printf("Rule '%s' already exists. Do you want to overwrite it? (y/n): ", name)
-			var response string
-			fmt.Scanln(&response)
-			if response != "y" {
-				fmt.Println("Operation cancelled.")
-				return
-			}
-			lines[i] = fmt.Sprintf("%s = %s", name, command)
-			found = true
-			break
-		}
-	}
+    found := false
+    for i, line := range lines {
+        if strings.HasPrefix(line, name+" = ") {
+            fmt.Printf("The rule '%s' already exists. Do you want to overwrite it? (y/n): ", name)
+            var response string
+            fmt.Scanln(&response)
+            if response != "y" {
+                fmt.Println("Operation cancelled.")
+                return
+            }
+            lines[i] = fmt.Sprintf("%s = %s", name, command)
+            found = true
+            break
+        }
+    }
 
-	if !found {
-		lines = append(lines, fmt.Sprintf("%s = %s", name, command))
-	}
+    if !found {
+        lines = append(lines, fmt.Sprintf("%s = %s", name, command))
+    }
 
-	err = writeLines(configFile, lines)
-	if err != nil {
-		fmt.Println("Error writing to the configuration file:", err)
-		return
-	}
+    err = writeLines(configFile, lines)
+    if err != nil {
+        fmt.Println("Error writing to the configuration file:", err)
+        return
+    }
 
-	// write the events in baby.log
-	err = logEvent("CREATE_RULE", fmt.Sprintf("Name: %s, Command: %s", name, command))
+    // write the events in baby.log
+    err = logEvent("CREATE_RULE", fmt.Sprintf("Name: %s, Command: %s", name, command))
     if err != nil {
         fmt.Printf("Warning: Failed to log event: %v\n", err)
     }
 
-	fmt.Printf("Rule '%s' successfully added.\n", name)
+    fmt.Printf("Rule '%s' successfully added.\n", name)
 }
 
 func deleteRule(name string) {
-	lines, err := readLines(configFile)
-	if err != nil {
-		fmt.Println("Error reading the configuration file:", err)
-		return
-	}
+    lines, err := readLines(configFile)
+    if err != nil {
+        fmt.Println("Error reading the configuration file:", err)
+        return
+    }
 
-	found := false
-	for i, line := range lines {
-		if strings.HasPrefix(line, name+" = ") {
-			lines = append(lines[:i], lines[i+1:]...)
-			found = true
-			break
-		}
-	}
+    found := false
+    for i, line := range lines {
+        if strings.HasPrefix(line, name+" = ") {
+            lines = append(lines[:i], lines[i+1:]...)
+            found = true
+            break
+        }
+    }
 
-	if !found {
-		fmt.Printf("Rule '%s' not found.\n", name)
-		return
-	}
+    if !found {
+        fmt.Printf("Rule '%s' not found.\n", name)
+        return
+    }
 
-	err = writeLines(configFile, lines)
-	if err != nil {
-		fmt.Println("Error writing to the configuration file:", err)
-		return
-	}
+    err = writeLines(configFile, lines)
+    if err != nil {
+        fmt.Println("Error writing to the configuration file:", err)
+        return
+    }
 
-	// write events in baby.log
-	err = logEvent("DELETE_RULE", fmt.Sprintf("Name: %s", name))
+    // write events in baby.log
+    err = logEvent("DELETE_RULE", fmt.Sprintf("Name: %s", name))
     if err != nil {
         fmt.Printf("Warning: Failed to log event: %v\n", err)
     }
 
-	fmt.Printf("Rule '%s' successfully deleted.\n", name)
+    fmt.Printf("Rule '%s' successfully deleted.\n", name)
 }
 
 func deleteAllRules() error {
@@ -284,68 +280,68 @@ func deleteAllRules() error {
 }
 
 func updateRule(name, command string) {
-	lines, err := readLines(configFile)
-	if err != nil {
-		fmt.Println("Error reading the configuration file:", err)
-		return
-	}
+    lines, err := readLines(configFile)
+    if err != nil {
+        fmt.Println("Error reading the configuration file:", err)
+        return
+    }
 
-	if isReservedName(name) {
-		fmt.Printf("Unable to update rule. '%s' is a reserved command name.\n", name)
-		return
-	}
+    if isReservedName(name) {
+        fmt.Printf("Unable to update rule. '%s' is a reserved command name.\n", name)
+        return
+    }
 
-	found := false
-	for i, line := range lines {
-		if strings.HasPrefix(line, name+" = ") {
-			lines[i] = fmt.Sprintf("%s = %s", name, command)
-			found = true
-			break
-		}
-	}
+    found := false
+    for i, line := range lines {
+        if strings.HasPrefix(line, name+" = ") {
+            lines[i] = fmt.Sprintf("%s = %s", name, command)
+            found = true
+            break
+        }
+    }
 
-	if !found {
-		fmt.Printf("Rule '%s' not found.\n", name)
-		return
-	}
+    if !found {
+        fmt.Printf("Rule '%s' not found.\n", name)
+        return
+    }
 
-	err = writeLines(configFile, lines)
-	if err != nil {
-		fmt.Println("Error writing to the configuration file:", err)
-		return
-	}
+    err = writeLines(configFile, lines)
+    if err != nil {
+        fmt.Println("Error writing to the configuration file:", err)
+        return
+    }
 
-	// write events in baby.log
-	err = logEvent("UPDATE_RULE", fmt.Sprintf("Name: %s, New Command: %s", name, command))
+    // write events in baby.log
+    err = logEvent("UPDATE_RULE", fmt.Sprintf("Name: %s, New Command: %s", name, command))
     if err != nil {
         fmt.Printf("Warning: Failed to log event: %v\n", err)
     }
 
-	fmt.Printf("Rule '%s' successfully updated.\n", name)
+    fmt.Printf("Rule '%s' successfully updated.\n", name)
 }
 
 func showRule(name string) {
-	file, err := os.Open(configFile)
-	if err != nil {
-		fmt.Println("Failed to open the configuration file:", err)
-		return
-	}
-	defer file.Close()
+    file, err := os.Open(configFile)
+    if err != nil {
+        fmt.Println("Failed to open the configuration file:", err)
+        return
+    }
+    defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	found := false
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, name+" = ") {
-			fmt.Println(line)
-			found = true
-			break
-		}
-	}
+    scanner := bufio.NewScanner(file)
+    found := false
+    for scanner.Scan() {
+        line := scanner.Text()
+        if strings.HasPrefix(line, name+" = ") {
+            fmt.Println(line)
+            found = true
+            break
+        }
+    }
 
-	if !found {
-		fmt.Printf("Rule '%s' does not exist.\n", name)
-	}
+    if !found {
+        fmt.Printf("Rule '%s' does not exist.\n", name)
+    }
 }
 
 func runCommands(commands []string, bottleValues map[string]string) {
@@ -384,96 +380,26 @@ func runCommands(commands []string, bottleValues map[string]string) {
 }
 
 func getCommand(name string) (string, error) {
-	file, err := os.Open(configFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to open the configuration file: %v", err)
-	}
-	defer file.Close()
+    file, err := os.Open(configFile)
+    if err != nil {
+        return "", fmt.Errorf("failed to open the configuration file: %v", err)
+    }
+    defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, name+" = ") {
-			return strings.TrimSpace(strings.TrimPrefix(line, name+" = ")), nil
-		}
-	}
+    scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        line := scanner.Text()
+        if strings.HasPrefix(line, name+" = ") {
+            return strings.TrimSpace(strings.TrimPrefix(line, name+" = ")), nil
+        }
+    }
 
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("error reading the configuration file: %v", err)
-	}
+    if err := scanner.Err(); err != nil {
+        return "", fmt.Errorf("error reading the configuration file: %v", err)
+    }
 
-	return "", fmt.Errorf("rule '%s' not found", name)
+    return "", fmt.Errorf("rule '%s' not found", name)
 }
-
-func importRulesFromURL(url string) {
-    resp, err := http.Get(url)
-    if err != nil {
-        fmt.Println("Error fetching rules from URL:", err)
-        return
-    }
-    defer resp.Body.Close()
-
-    if resp.StatusCode != http.StatusOK {
-        fmt.Println("Failed to fetch rules from URL. Status code:", resp.StatusCode)
-        return
-    }
-
-    body, err := io.ReadAll(resp.Body)
-    if err != nil {
-        fmt.Println("Error reading response body:", err)
-        return
-    }
-
-    rulesText := string(body)
-
-    // Use HTML unescaping to convert special characters
-    rulesText = html.UnescapeString(rulesText)
-
-    // Process the rules
-    rules := extractRules(rulesText)
-
-    // Import the rules into baby.conf
-    existingRules := make(map[string]bool)
-    fileLines, err := readLines(configFile)
-    if err == nil {
-        for _, line := range fileLines {
-            parts := strings.SplitN(line, "=", 2)
-            if len(parts) == 2 {
-                existingRules[strings.TrimSpace(parts[0])] = true
-            }
-        }
-    }
-
-    for _, rule := range rules {
-        parts := strings.Split(rule, " = ")
-        if len(parts) != 2 {
-            fmt.Println("Error parsing rule:", rule)
-            continue
-        }
-        name := strings.TrimSpace(parts[0])
-        command := strings.TrimSpace(parts[1])
-
-        // Check if the rule already exists
-        if existingRules[name] {
-            fmt.Printf("Rule '%s' already exists. Do you want to overwrite it? (y/n): ", name)
-            var response string
-            fmt.Scanln(&response)
-            if response != "y" {
-                fmt.Printf("Skipping rule '%s'.\n", name)
-                continue
-            }
-            updateRule(name, command)
-        } else {
-            createRule(name, command)
-
-		// Log the import event
-        err := logEvent("IMPORT_RULE", fmt.Sprintf("From URL: %s, Name: %s, Command: %s", url, name, command))
-        if err != nil {
-            fmt.Printf("Warning: Failed to log event: %v\n", err)
-        		}
-    		}
-		}
-	}
 
 func importRulesFromFile(filePath string) {
     file, err := os.Open(filePath)
@@ -495,18 +421,14 @@ func importRulesFromFile(filePath string) {
 
     rules := extractRules(rulesText)
 
-    // Import the rules into baby.conf
-    existingRules := make(map[string]bool)
-    fileLines, err := readLines(configFile)
-    if err == nil {
-        for _, line := range fileLines {
-            parts := strings.SplitN(line, "=", 2)
-            if len(parts) == 2 {
-                existingRules[strings.TrimSpace(parts[0])] = true
-            }
-        }
+    // Read existing rules
+    existingRules, err := readLines(configFile)
+    if err != nil {
+        fmt.Println("Error reading existing rules:", err)
+        return
     }
 
+    // Process rules
     for _, rule := range rules {
         parts := strings.Split(rule, " = ")
         if len(parts) != 2 {
@@ -517,207 +439,226 @@ func importRulesFromFile(filePath string) {
         command := strings.TrimSpace(parts[1])
 
         // Check if the rule already exists
-        if existingRules[name] {
-            fmt.Printf("Rule '%s' already exists. Do you want to overwrite it? (y/n): ", name)
-            var response string
-            fmt.Scanln(&response)
-            if response != "y" {
-                fmt.Printf("Skipping rule '%s'.\n", name)
-                continue
+        exists := false
+        for i, existingRule := range existingRules {
+            if strings.HasPrefix(existingRule, name+" = ") {
+                exists = true
+                fmt.Printf("Rule '%s' already exists. Do you want to overwrite it? (y/n): ", name)
+                var response string
+                fmt.Scanln(&response)
+                if response == "y" {
+                    existingRules[i] = fmt.Sprintf("%s = %s", name, command)
+                    fmt.Printf("Rule '%s' updated.\n", name)
+                } else {
+                    fmt.Printf("Skipping rule '%s'.\n", name)
+                }
+                break
             }
-            updateRule(name, command)
-        } else {
-            createRule(name, command)
+        }
 
-		// Log the import event
+        if !exists {
+            existingRules = append(existingRules, fmt.Sprintf("%s = %s", name, command))
+            fmt.Printf("Rule '%s' added.\n", name)
+        }
+
+        // Log the import event
         err := logEvent("IMPORT_RULE", fmt.Sprintf("From File: %s, Name: %s, Command: %s", filePath, name, command))
         if err != nil {
             fmt.Printf("Warning: Failed to log event: %v\n", err)
-        		}
-    		}
-		}
-	}
+        }
+    }
+
+    // Write all rules back to the config file
+    //err = writeLines(configFile, existingRules)
+    err = writeLinesWithLock(configFile, existingRules)
+    if err != nil {
+        fmt.Println("Error writing rules to config file:", err)
+        return
+    }
+
+    fmt.Println("Rules imported successfully.")
+}
 
 func extractRules(text string) []string {
-	var rules []string
+    var rules []string
 
-	re := regexp.MustCompile(`b:([^=]+) = (.*?):b`)
-	matches := re.FindAllStringSubmatch(text, -1)
-	for _, match := range matches {
-		ruleName := strings.TrimSpace(match[1])
-		ruleCommand := strings.TrimSpace(match[2])
+    re := regexp.MustCompile(`b:([^=]+) = (.*?):b`)
+    matches := re.FindAllStringSubmatch(text, -1)
+    for _, match := range matches {
+        ruleName := strings.TrimSpace(match[1])
+        ruleCommand := strings.TrimSpace(match[2])
 
-		// Replace HTML entities with their actual characters
-		ruleCommand = html.UnescapeString(ruleCommand)
+        // Replace HTML entities with their actual characters
+        ruleCommand = html.UnescapeString(ruleCommand)
 
-		rule := fmt.Sprintf("%s = %s", ruleName, ruleCommand)
-		rules = append(rules, rule)
-	}
+        rule := fmt.Sprintf("%s = %s", ruleName, ruleCommand)
+        rules = append(rules, rule)
+    }
 
-	return rules
+    return rules
 }
 
 func exportRules() {
-	fmt.Println("Exporting rules in progress... Press ctrl+c to quit")
-	fmt.Println("You can export rules in bulk, e.g., <rule1> <rule2>")
+    fmt.Println("Exporting rules in progress... Press ctrl+c to quit")
+    fmt.Println("You can export rules in bulk, e.g., <rule1> <rule2>")
 
-	var exportRules []string
-	scanner := bufio.NewScanner(os.Stdin)
+    var exportRules []string
+    scanner := bufio.NewScanner(os.Stdin)
 
-	for {
-		fmt.Println("Which rule(s) do you want to export? Leave blank to export all:")
-		scanner.Scan()
-		text := scanner.Text()
+    for {
+        fmt.Println("Which rule(s) do you want to export? Leave blank to export all:")
+        scanner.Scan()
+        text := scanner.Text()
 
-		if text == "" {
-			exportRules = getAllRules()
-			break
-		} else {
-			rules := strings.Fields(text)
-			exportRules = nil // Reset the exportRules slice for re-selection
-			var invalidRules []string
-			for _, rule := range rules {
-				if ruleExists(rule) {
-					exportRules = append(exportRules, rule)
-				} else {
-					invalidRules = append(invalidRules, rule)
-				}
-			}
+        if text == "" {
+            exportRules = getAllRules()
+            break
+        } else {
+            rules := strings.Fields(text)
+            exportRules = nil // Reset the exportRules slice for re-selection
+            var invalidRules []string
+            for _, rule := range rules {
+                if ruleExists(rule) {
+                    exportRules = append(exportRules, rule)
+                } else {
+                    invalidRules = append(invalidRules, rule)
+                }
+            }
 
-			if len(invalidRules) > 0 {
-				fmt.Printf("The following rules were not found: %v\n", invalidRules)
-				fmt.Println("Please re-enter the correct rules or leave blank to export all.")
-			} else {
-				break
-			}
-		}
-	}
+            if len(invalidRules) > 0 {
+                fmt.Printf("The following rules were not found: %v\n", invalidRules)
+                fmt.Println("Please re-enter the correct rules or leave blank to export all.")
+            } else {
+                break
+            }
+        }
+    }
 
-	if len(exportRules) == 0 {
-		fmt.Println("No valid rules selected for export.")
-		return
-	}
+    if len(exportRules) == 0 {
+        fmt.Println("No valid rules selected for export.")
+        return
+    }
 
-	fmt.Println("Do you want to add a comment? Leave blank to continue:")
-	scanner.Scan()
-	comment := scanner.Text()
+    fmt.Println("Do you want to add a comment? Leave blank to continue:")
+    scanner.Scan()
+    comment := scanner.Text()
 
-	// Prepare export content
-	var exportContent []string
-	if comment != "" {
-		exportContent = append(exportContent, fmt.Sprintf("#%s", comment))
-	}
+    // Prepare export content
+    var exportContent []string
+    if comment != "" {
+        exportContent = append(exportContent, fmt.Sprintf("#%s", comment))
+    }
 
-	for _, rule := range exportRules {
-		command, err := getCommand(rule)
-		if err != nil {
-			fmt.Printf("Error getting command for rule '%s': %v\n", rule, err)
-			continue
-		}
-		exportContent = append(exportContent, fmt.Sprintf("b:%s = %s:b", rule, command))
-	}
+    for _, rule := range exportRules {
+        command, err := getCommand(rule)
+        if err != nil {
+            fmt.Printf("Error getting command for rule '%s': %v\n", rule, err)
+            continue
+        }
+        exportContent = append(exportContent, fmt.Sprintf("b:%s = %s:b", rule, command))
+    }
 
-	for {
-		fmt.Println("Where do you want to store your file? Leave blank to store in $HOME")
-		fmt.Println("Select a folder for your file:")
-		scanner.Scan()
-		exportPath := scanner.Text()
+    for {
+        fmt.Println("Where do you want to store your file? Leave blank to store in $HOME")
+        fmt.Println("Select a folder for your file:")
+        scanner.Scan()
+        exportPath := scanner.Text()
 
-		if exportPath == "" {
-			exportPath = os.Getenv("HOME")
-		}
+        if exportPath == "" {
+            exportPath = os.Getenv("HOME")
+        }
 
-		// Check if the path is valid
-		fileInfo, err := os.Stat(exportPath)
-		if err != nil || !fileInfo.IsDir() {
-			fmt.Println("Location not found or not a directory.")
-			continue
-		}
+        // Check if the path is valid
+        fileInfo, err := os.Stat(exportPath)
+        if err != nil || !fileInfo.IsDir() {
+            fmt.Println("Location not found or not a directory.")
+            continue
+        }
 
-		// Write to file
-		exportFilePath := fmt.Sprintf("%s/baby-rules.txt", exportPath)
-		err = writeToFile(exportFilePath, exportContent)
-		if err != nil {
-			fmt.Println("Error writing rules to file:", err)
-			return
-		}
+        // Write to file
+        exportFilePath := fmt.Sprintf("%s/baby-rules.txt", exportPath)
+        err = writeToFile(exportFilePath, exportContent)
+        if err != nil {
+            fmt.Println("Error writing rules to file:", err)
+            return
+        }
 
-		fmt.Printf("Rules successfully exported to: %s\n", exportFilePath)
+        fmt.Printf("Rules successfully exported to: %s\n", exportFilePath)
 
-		// Log the export event
-		exportedRules := strings.Join(exportRules, ", ")
-		err = logEvent("EXPORT_RULES", fmt.Sprintf("Exported rules: %s, To file: %s", exportedRules, exportFilePath))
-		if err != nil {
-		fmt.Printf("Warning: Failed to log event: %v\n", err)
-		}
+        // Log the export event
+        exportedRules := strings.Join(exportRules, ", ")
+        err = logEvent("EXPORT_RULES", fmt.Sprintf("Exported rules: %s, To file: %s", exportedRules, exportFilePath))
+        if err != nil {
+        fmt.Printf("Warning: Failed to log event: %v\n", err)
+        }
 
-		break
-	}
+        break
+    }
 }
 
 func ruleExists(name string) bool {
-	file, err := os.Open(configFile)
-	if err != nil {
-		return false
-	}
-	defer file.Close()
+    file, err := os.Open(configFile)
+    if err != nil {
+        return false
+    }
+    defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, name+" = ") {
-			return true
-		}
-	}
+    scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        line := scanner.Text()
+        if strings.HasPrefix(line, name+" = ") {
+            return true
+        }
+    }
 
-	return false
+    return false
 }
 
 func getAllRules() []string {
-	var rules []string
+    var rules []string
 
-	file, err := os.Open(configFile)
-	if err != nil {
-		fmt.Println("Failed to open the configuration file:", err)
-		return rules
-	}
-	defer file.Close()
+    file, err := os.Open(configFile)
+    if err != nil {
+        fmt.Println("Failed to open the configuration file:", err)
+        return rules
+    }
+    defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2 {
-			rules = append(rules, strings.TrimSpace(parts[0]))
-		}
-	}
+    scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        line := scanner.Text()
+        parts := strings.SplitN(line, "=", 2)
+        if len(parts) == 2 {
+            rules = append(rules, strings.TrimSpace(parts[0]))
+        }
+    }
 
-	if err := scanner.Err(); err != nil {
-		fmt.Println("Error reading the configuration file:", err)
-	}
+    if err := scanner.Err(); err != nil {
+        fmt.Println("Error reading the configuration file:", err)
+    }
 
-	return rules
+    return rules
 }
 
 func writeToFile(filePath string, content []string) error {
-	file, err := os.Create(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to create file: %v", err)
-	}
-	defer file.Close()
+    file, err := os.Create(filePath)
+    if err != nil {
+        return fmt.Errorf("failed to create file: %v", err)
+    }
+    defer file.Close()
 
-	writer := bufio.NewWriter(file)
-	for _, line := range content {
-		_, err := fmt.Fprintln(writer, line)
-		if err != nil {
-			return fmt.Errorf("failed to write to file: %v", err)
-		}
-	}
-	if err := writer.Flush(); err != nil {
-		return fmt.Errorf("failed to flush writer: %v", err)
-	}
+    writer := bufio.NewWriter(file)
+    for _, line := range content {
+        _, err := fmt.Fprintln(writer, line)
+        if err != nil {
+            return fmt.Errorf("failed to write to file: %v", err)
+        }
+    }
+    if err := writer.Flush(); err != nil {
+        return fmt.Errorf("failed to flush writer: %v", err)
+    }
 
-	return nil
+    return nil
 }
 
 func executeCommand(command string) error {
@@ -751,41 +692,41 @@ func processBottles(command string, bottleValues map[string]string) string {
 }
 
 func readLines(filename string) ([]string, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+    file, err := os.Open(filename)
+    if err != nil {
+        return nil, err
+    }
+    defer file.Close()
 
-	var lines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	return lines, scanner.Err()
+    var lines []string
+    scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        lines = append(lines, scanner.Text())
+    }
+    return lines, scanner.Err()
 }
 
 func writeLines(filename string, lines []string) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
+    file, err := os.Create(filename)
+    if err != nil {
+        return err
+    }
+    defer file.Close()
 
-	writer := bufio.NewWriter(file)
-	for _, line := range lines {
-		// Write the line after unquoting it to interpret escaped characters
-		unquotedLine, err := strconv.Unquote(`"` + line + `"`)
-		if err != nil {
-			fmt.Println("Error unquoting line:", line, "Error:", err)
-			return err
-		}
-		_, err = fmt.Fprintln(writer, unquotedLine)
-		if err != nil {
-			return err
-		}
-	}
-	return writer.Flush()
+    writer := bufio.NewWriter(file)
+    for _, line := range lines {
+        // Write the line after unquoting it to interpret escaped characters
+        unquotedLine, err := strconv.Unquote(`"` + line + `"`)
+        if err != nil {
+            fmt.Println("Error unquoting line:", line, "Error:", err)
+            return err
+        }
+        _, err = fmt.Fprintln(writer, unquotedLine)
+        if err != nil {
+            return err
+        }
+    }
+    return writer.Flush()
 }
 
 func logEvent(eventType, details string) error {
@@ -838,4 +779,35 @@ func isReservedName(name string) bool {
         }
     }
     return false
+}
+
+func writeLinesWithLock(filename string, lines []string) error {
+    file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
+    if err != nil {
+        return err
+    }
+    defer file.Close()
+
+    // Lock the file
+    if err := unix.Flock(int(file.Fd()), unix.LOCK_EX); err != nil {
+        return err
+    }
+    defer unix.Flock(int(file.Fd()), unix.LOCK_UN)
+
+    // Truncate the file
+    if err := file.Truncate(0); err != nil {
+        return err
+    }
+    if _, err := file.Seek(0, 0); err != nil {
+        return err
+    }
+
+    writer := bufio.NewWriter(file)
+    for _, line := range lines {
+        _, err = fmt.Fprintln(writer, line)
+        if err != nil {
+            return err
+        }
+    }
+    return writer.Flush()
 }

@@ -14,8 +14,6 @@ You can easily set rules, delete them, list them and update them with a clear li
 
 * Run your rules in bulk, i.e. `baby <rule1> <rule2>`
 
-* Import rules from a URL
-
 * Import rules from a local file
 
 * Backup your rules to a local file
@@ -59,9 +57,9 @@ First step after install the program is run `baby -h` to know about how the scri
 
 :pencil: **IMPORTING RULES**
 
-  `baby -i <URL or path>` will import rules from a URL or a local file.
+  `baby -i <file path>` will import rules from a local file.
 
-  Your URL must to point to a file extension, i.e: .txt, .md, .html, etc.
+  The path must to point to a file extension, i.e: .txt, .md, .html, etc.
 
   The stored rules must follow this syntax: `b:<rule> = <command>:b`
 
@@ -106,9 +104,9 @@ There are two options to list the rules stored in baby.conf file.
 
 # 🤖 **TESTED ON**
 
-🟢 Elementary OS
-
 🟢 Debian
+
+🟢 Ubuntu
 
 🟢 Linux Mint
 
@@ -118,6 +116,6 @@ There are two options to list the rules stored in baby.conf file.
 
 🟢 AlmaLinux
 
-🟢 Zorin OS
+🟢 RockyLinux
 
-🟢 Endeavour OS
+🟢 CentOS Stream
