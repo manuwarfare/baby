@@ -131,7 +131,7 @@ func showHelp() {
     fmt.Println(" -ln <name>\t\tShow the contents of a specific rule")
     fmt.Println(" -h\t\t\tShow this help")
     fmt.Println(" -v\t\t\tShow the program version")
-    fmt.Println(" -i <file path>\tImport rules from a local file")
+    fmt.Println(" -i <file path>\t\tImport rules from a local file")
     fmt.Println(" -e\t\t\tExport rules to a text file (backup)")
     fmt.Println(" -b=<variable:value>\tPre-define the content of a bottle")
     fmt.Println("\t\t\tSyntax for create bottles: b%('variable')%b")
