@@ -113,3 +113,7 @@ There are two options to list the rules stored in baby.conf file.
 🟢 MX Linux
 
 🟢 Fedora
+
+🟢 Almalinux
+
+🟢 RockyLinux
