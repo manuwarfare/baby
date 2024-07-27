@@ -3,17 +3,19 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"net"
 	"os"
-    "html"
+    "net"
+    "net/http"
 	"path/filepath"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+    "io"
 
     "golang.org/x/sys/unix"
+    "golang.org/x/net/html"
 
 )
 
@@ -22,7 +24,7 @@ const (
     configFileName = "baby.conf"
     logDir = "/.local/share/baby/"
     logFileName = "baby.log"
-    VERSION = "1.0.54"
+    VERSION = "1.0.55"
 )
 
 var configFile = filepath.Join(os.Getenv("HOME"), configDir, configFileName)
@@ -103,11 +105,15 @@ func main() {
         fmt.Println("Baby version", VERSION)
     case "-i":
         if len(commands) != 2 {
-            fmt.Println("Error: Incorrect usage of -i. It should be: baby -i <file path>")
+            fmt.Println("Error: Incorrect usage of -i. It should be: baby -i <url or file path>")
             return
         }
         importSource := commands[1]
-        importRulesFromFile(importSource)
+        if strings.HasPrefix(importSource, "http://") || strings.HasPrefix(importSource, "https://") {
+            importRulesFromURL(importSource)
+        } else {
+            importRulesFromFile(importSource)
+        }
     case "-e":
         exportRules()
     default:
@@ -419,58 +425,60 @@ func importRulesFromFile(filePath string) {
         return
     }
 
-    rules := extractRules(rulesText)
+    rules := extractRulesFromText(rulesText)
 
-    // Read existing rules
+    // Leer reglas existentes
     existingRules, err := readLines(configFile)
-    if err != nil {
+    if err != nil && !os.IsNotExist(err) {
         fmt.Println("Error reading existing rules:", err)
         return
     }
 
-    // Process rules
-    for _, rule := range rules {
-        parts := strings.Split(rule, " = ")
-        if len(parts) != 2 {
-            fmt.Println("Error parsing rule:", rule)
-            continue
+    // Crear un mapa de reglas existentes para facilitar la búsqueda y actualización
+    existingRulesMap := make(map[string]string)
+    for _, rule := range existingRules {
+        parts := strings.SplitN(rule, " = ", 2)
+        if len(parts) == 2 {
+            existingRulesMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
         }
-        name := strings.TrimSpace(parts[0])
-        command := strings.TrimSpace(parts[1])
+    }
 
-        // Check if the rule already exists
-        exists := false
-        for i, existingRule := range existingRules {
-            if strings.HasPrefix(existingRule, name+" = ") {
-                exists = true
+    // Procesar reglas importadas
+    for name, command := range rules {
+        if existingCommand, exists := existingRulesMap[name]; exists {
+            if existingCommand != command {
                 fmt.Printf("Rule '%s' already exists. Do you want to overwrite it? (y/n): ", name)
                 var response string
                 fmt.Scanln(&response)
                 if response == "y" {
-                    existingRules[i] = fmt.Sprintf("%s = %s", name, command)
+                    existingRulesMap[name] = command
                     fmt.Printf("Rule '%s' updated.\n", name)
                 } else {
                     fmt.Printf("Skipping rule '%s'.\n", name)
                 }
-                break
+            } else {
+                fmt.Printf("Rule '%s' already exists with the same command. Skipping.\n", name)
             }
-        }
-
-        if !exists {
-            existingRules = append(existingRules, fmt.Sprintf("%s = %s", name, command))
+        } else {
+            existingRulesMap[name] = command
             fmt.Printf("Rule '%s' added.\n", name)
         }
 
-        // Log the import event
+        // Registry importation event in log file
         err := logEvent("IMPORT_RULE", fmt.Sprintf("From File: %s, Name: %s, Command: %s", filePath, name, command))
         if err != nil {
             fmt.Printf("Warning: Failed to log event: %v\n", err)
         }
     }
 
-    // Write all rules back to the config file
-    //err = writeLines(configFile, existingRules)
-    err = writeLinesWithLock(configFile, existingRules)
+    // Convert back map in keylist
+    var updatedRules []string
+    for name, command := range existingRulesMap {
+        updatedRules = append(updatedRules, fmt.Sprintf("%s = %s", name, command))
+    }
+
+    // Write back rules in config file
+    err = writeLinesWithLock(configFile, updatedRules)
     if err != nil {
         fmt.Println("Error writing rules to config file:", err)
         return
@@ -479,23 +487,159 @@ func importRulesFromFile(filePath string) {
     fmt.Println("Rules imported successfully.")
 }
 
-func extractRules(text string) []string {
-    var rules []string
+func importRulesFromURL(url string) {
+    fmt.Println("Fetching rules from URL:", url)
+    resp, err := http.Get(url)
+    if err != nil {
+        fmt.Println("Error fetching rules from URL:", err)
+        logEvent("IMPORT_RULE_ERROR", fmt.Sprintf("Fetching rules from URL: %s | Error: %s", url, err.Error()))
+        return
+    }
+    defer resp.Body.Close()
 
-    re := regexp.MustCompile(`b:([^=]+) = (.*?):b`)
+    if resp.StatusCode != http.StatusOK {
+        fmt.Println("Failed to fetch rules from URL. Status code:", resp.StatusCode)
+        logEvent("IMPORT_RULE_ERROR", fmt.Sprintf("Fetching rules from URL: %s | Status code: %d", url, resp.StatusCode))
+        return
+    }
+
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        fmt.Println("Error reading response body:", err)
+        logEvent("IMPORT_RULE_ERROR", fmt.Sprintf("Reading response body from URL: %s | Error: %s", url, err.Error()))
+        return
+    }
+
+    // Debug: print the content to check the format
+    fmt.Println("Content of the rules file:")
+    fmt.Println(string(body))
+
+    rulesText := string(body)
+    rules := extractRules(rulesText)
+    fmt.Printf("Extracted %d rules\n", len(rules))
+    logEvent("IMPORT_RULE_SUCCESS", fmt.Sprintf("Extracted %d rules from URL: %s", len(rules), url))
+
+    existingRules, err := readLines(configFile)
+    if err != nil && !os.IsNotExist(err) {
+        fmt.Println("Error reading existing rules:", err)
+        logEvent("IMPORT_RULE_ERROR", fmt.Sprintf("Reading existing rules | Error: %s", err.Error()))
+        return
+    }
+    fmt.Printf("Read %d existing rules\n", len(existingRules))
+
+    existingRulesMap := make(map[string]string)
+    for _, rule := range existingRules {
+        parts := strings.SplitN(rule, " = ", 2)
+        if len(parts) == 2 {
+            existingRulesMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+        }
+    }
+
+    updatedRules := false
+    for name, command := range rules {
+        if existingCommand, exists := existingRulesMap[name]; exists {
+            if existingCommand != command {
+                fmt.Printf("Rule '%s' already exists with a different command.\n", name)
+                fmt.Printf("Existing: %s\n", existingCommand)
+                fmt.Printf("New: %s\n", command)
+                fmt.Printf("Do you want to overwrite it? (y/n): ")
+                var response string
+                fmt.Scanln(&response)
+                if response == "y" {
+                    existingRulesMap[name] = command
+                    fmt.Printf("Rule '%s' updated.\n", name)
+                    updatedRules = true
+                    logEvent("IMPORT_RULE_UPDATE", fmt.Sprintf("From URL: %s, Name: %s, Command: %s (updated)", url, name, command))
+                } else {
+                    fmt.Printf("Skipping rule '%s'.\n", name)
+                }
+            } else {
+                fmt.Printf("Rule '%s' already exists with the same command. Skipping.\n", name)
+            }
+        } else {
+            existingRulesMap[name] = command
+            fmt.Printf("Rule '%s' added.\n", name)
+            updatedRules = true
+            logEvent("IMPORT_RULE_ADD", fmt.Sprintf("From URL: %s, Name: %s, Command: %s (added)", url, name, command))
+        }
+    }
+
+    if !updatedRules {
+        fmt.Println("No rules were added or updated.")
+        logEvent("IMPORT_RULE_INFO", "No rules were added or updated.")
+        return
+    }
+
+    var updatedRulesList []string
+    for name, command := range existingRulesMap {
+        updatedRulesList = append(updatedRulesList, fmt.Sprintf("%s = %s", name, command))
+    }
+
+    err = writeLinesWithLock(configFile, updatedRulesList)
+    if err != nil {
+        fmt.Println("Error writing rules to config file:", err)
+        logEvent("IMPORT_RULE_ERROR", fmt.Sprintf("Writing rules to config file | Error: %s", err.Error()))
+        return
+    }
+
+    fmt.Println("Rules imported successfully.")
+    logEvent("IMPORT_RULE_SUCCESS", fmt.Sprintf("Rules imported successfully from URL: %s", url))
+}
+
+func extractRules(text string) map[string]string {
+    rules := make(map[string]string)
+
+    // Try to parse as HTML first
+    doc, err := html.Parse(strings.NewReader(text))
+    if err == nil {
+        var f func(*html.Node)
+        f = func(n *html.Node) {
+            if n.Type == html.TextNode {
+                // Extraer reglas del texto del nodo HTML
+                for k, v := range extractRulesFromText(n.Data) {
+                    rules[k] = v
+                }
+            }
+            for c := n.FirstChild; c != nil; c = c.NextSibling {
+                f(c)
+            }
+        }
+        f(doc)
+    } else {
+        // If not HTML, try to extract rules directly
+        for k, v := range extractRulesFromText(text) {
+            rules[k] = v
+        }
+    }
+
+    return rules
+}
+
+func extractRulesFromText(text string) map[string]string {
+    rules := make(map[string]string)
+    re := regexp.MustCompile(`b:([^=]+) = (.+):b`)
     matches := re.FindAllStringSubmatch(text, -1)
     for _, match := range matches {
         ruleName := strings.TrimSpace(match[1])
         ruleCommand := strings.TrimSpace(match[2])
 
-        // Replace HTML entities with their actual characters
+        // Reemplazar entidades HTML con sus caracteres reales
         ruleCommand = html.UnescapeString(ruleCommand)
 
-        rule := fmt.Sprintf("%s = %s", ruleName, ruleCommand)
-        rules = append(rules, rule)
-    }
+        // Decodificar secuencias de escape Unicode
+        ruleCommand = decodeUnicode(ruleCommand)
 
+        rules[ruleName] = ruleCommand
+    }
     return rules
+}
+
+func decodeUnicode(s string) string {
+    re := regexp.MustCompile(`\\u([0-9a-fA-F]{4})`)
+    return re.ReplaceAllStringFunc(s, func(m string) string {
+        code, _ := strconv.ParseInt(m[2:], 16, 32)
+        return string(rune(code))
+    })
 }
 
 func exportRules() {
@@ -744,7 +888,7 @@ func logEvent(eventType, details string) error {
     defer file.Close()
 
     user := os.Getenv("USER")
-    timestamp := time.Now().Format("2006-01-24 15:04:05")
+    timestamp := time.Now().Format("2006-01-02 15:04:05")
     ip := getIP()
 
     logMessage := fmt.Sprintf("[%s] %s %s at %s | %s\n", // i.e User:%s
