@@ -164,12 +164,6 @@ func showHelp() {
 }
 
 func listRules() {
-	err := initConfigFile()
-    if err != nil {
-        fmt.Printf("Error initializing config file: %v\n", err)
-        return
-    }
-
     file, err := os.Open(configFile)
     if err != nil {
         fmt.Println("Failed to open the configuration file:", err)
@@ -202,12 +196,6 @@ func listRules() {
 }
 
 func createRule(name, command string) {
-	err := initConfigFile()
-    if err != nil {
-        fmt.Printf("Error initializing config file: %v\n", err)
-        return
-    }
-
     lines, err := readLines(configFile)
     if err != nil {
         fmt.Println("Error reading the configuration file:", err)
@@ -255,12 +243,6 @@ func createRule(name, command string) {
 }
 
 func deleteRule(name string) {
-	err := initConfigFile()
-    if err != nil {
-        fmt.Printf("Error initializing config file: %v\n", err)
-        return
-    }
-
     lines, err := readLines(configFile)
     if err != nil {
         fmt.Println("Error reading the configuration file:", err)
@@ -314,12 +296,6 @@ func deleteAllRules() error {
 
 func updateRule(name, command string) {
 	err := initConfigFile()
-    if err != nil {
-        fmt.Printf("Error initializing config file: %v\n", err)
-        return
-    }
-
-	err = initConfigFile()
     if err != nil {
         fmt.Printf("Error initializing config file: %v\n", err)
         return
@@ -425,11 +401,6 @@ func runCommands(commands []string, bottleValues map[string]string) {
 }
 
 func getCommand(name string) (string, error) {
-	err := initConfigFile()
-    if err != nil {
-        return "", fmt.Errorf("Error initializing config file: %v", err)
-    }
-
     file, err := os.Open(configFile)
     if err != nil {
         return "", fmt.Errorf("failed to open the configuration file: %v", err)
@@ -452,12 +423,6 @@ func getCommand(name string) (string, error) {
 }
 
 func importRulesFromFile(filePath string) {
-	err := initConfigFile()
-    if err != nil {
-        fmt.Printf("Error initializing config file: %v\n", err)
-        return
-    }
-
     file, err := os.Open(filePath)
     if err != nil {
         fmt.Println("Error opening file:", err)
@@ -555,12 +520,6 @@ func extractRules(text string) []string {
 }
 
 func exportRules() {
-	err := initConfigFile()
-    if err != nil {
-        fmt.Printf("Error initializing config file: %v\n", err)
-        return
-    }
-
     fmt.Println("Exporting rules in progress... Press ctrl+c to quit")
     fmt.Println("You can export rules in bulk, e.g., <rule1> <rule2>")
 
@@ -660,12 +619,6 @@ func exportRules() {
 }
 
 func ruleExists(name string) bool {
-	err := initConfigFile()
-    if err != nil {
-        fmt.Printf("Error initializing config file: %v\n", err)
-        return false
-    }
-
     file, err := os.Open(configFile)
     if err != nil {
         return false
@@ -684,12 +637,6 @@ func ruleExists(name string) bool {
 }
 
 func getAllRules() []string {
-	err := initConfigFile()
-    if err != nil {
-        fmt.Printf("Error initializing config file: %v\n", err)
-        return []string{}
-    }
-
     var rules []string
 
     file, err := os.Open(configFile)
@@ -767,11 +714,6 @@ func processBottles(command string, bottleValues map[string]string) string {
 }
 
 func readLines(filename string) ([]string, error) {
-	err := initConfigFile()
-    if err != nil {
-        return nil, fmt.Errorf("Error initializing config file: %v", err)
-    }
-
     file, err := os.Open(filename)
     if err != nil {
         return nil, err
@@ -787,11 +729,6 @@ func readLines(filename string) ([]string, error) {
 }
 
 func writeLines(filename string, lines []string) error {
-	err := initConfigFile()
-    if err != nil {
-        return fmt.Errorf("Error initializing config file: %v", err)
-    }
-
     file, err := os.Create(filename)
     if err != nil {
         return err
@@ -897,11 +834,6 @@ func isReservedName(name string) bool {
 }
 
 func writeLinesWithLock(filename string, lines []string) error {
-	err := initConfigFile()
-    if err != nil {
-        return fmt.Errorf("Error initializing config file: %v", err)
-    }
-
     file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
     if err != nil {
         return err
