@@ -16,8 +16,6 @@ You can easily set rules, delete them, list them and update them with a clear li
 
 * Import rules from a local file
 
-* Import rules from a URL
-
 * Backup your rules to a local file
 
 * Feeding bottles (adding variables inside a command)
@@ -59,7 +57,7 @@ First step after install the program is run `baby -h` to know about how the scri
 
 :pencil: **IMPORTING RULES**
 
-  `baby -i <URL or file path>` will import rules from a URL or a local file.
+  `baby -i <file path>` will import rules from a local file.
 
   The path must to point to a file extension, i.e: .txt, .md, .html, etc.
 

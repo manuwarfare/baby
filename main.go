@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"os"
     "net"
-    "net/http"
+	"html"
 	"path/filepath"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-    "io"
+	"log"
 
     "golang.org/x/sys/unix"
-    "golang.org/x/net/html"
 
 )
 
@@ -36,6 +35,20 @@ var reservedNames = []string{
 }
 
 func main() {
+
+    // Initialize the config file
+    homeDir, err := os.UserHomeDir()
+    if err != nil {
+        log.Fatalf("Failed to get home directory: %v", err)
+    }
+    configFile = filepath.Join(homeDir, ".config", "baby", "baby.conf")
+
+    // Initialize the config file
+    err = initConfigFile()
+    if err != nil {
+        log.Fatalf("Failed to initialize config file: %v", err)
+    }
+
     args := os.Args[1:]
 
     bottleValues := make(map[string]string)
@@ -105,15 +118,11 @@ func main() {
         fmt.Println("Baby version", VERSION)
     case "-i":
         if len(commands) != 2 {
-            fmt.Println("Error: Incorrect usage of -i. It should be: baby -i <url or file path>")
+            fmt.Println("Error: Incorrect usage of -i. It should be: baby -i <file path>")
             return
         }
         importSource := commands[1]
-        if strings.HasPrefix(importSource, "http://") || strings.HasPrefix(importSource, "https://") {
-            importRulesFromURL(importSource)
-        } else {
-            importRulesFromFile(importSource)
-        }
+        importRulesFromFile(importSource)
     case "-e":
         exportRules()
     default:
@@ -155,6 +164,12 @@ func showHelp() {
 }
 
 func listRules() {
+	err := initConfigFile()
+    if err != nil {
+        fmt.Printf("Error initializing config file: %v\n", err)
+        return
+    }
+
     file, err := os.Open(configFile)
     if err != nil {
         fmt.Println("Failed to open the configuration file:", err)
@@ -187,6 +202,12 @@ func listRules() {
 }
 
 func createRule(name, command string) {
+	err := initConfigFile()
+    if err != nil {
+        fmt.Printf("Error initializing config file: %v\n", err)
+        return
+    }
+
     lines, err := readLines(configFile)
     if err != nil {
         fmt.Println("Error reading the configuration file:", err)
@@ -234,6 +255,12 @@ func createRule(name, command string) {
 }
 
 func deleteRule(name string) {
+	err := initConfigFile()
+    if err != nil {
+        fmt.Printf("Error initializing config file: %v\n", err)
+        return
+    }
+
     lines, err := readLines(configFile)
     if err != nil {
         fmt.Println("Error reading the configuration file:", err)
@@ -286,6 +313,18 @@ func deleteAllRules() error {
 }
 
 func updateRule(name, command string) {
+	err := initConfigFile()
+    if err != nil {
+        fmt.Printf("Error initializing config file: %v\n", err)
+        return
+    }
+
+	err = initConfigFile()
+    if err != nil {
+        fmt.Printf("Error initializing config file: %v\n", err)
+        return
+    }
+
     lines, err := readLines(configFile)
     if err != nil {
         fmt.Println("Error reading the configuration file:", err)
@@ -386,6 +425,11 @@ func runCommands(commands []string, bottleValues map[string]string) {
 }
 
 func getCommand(name string) (string, error) {
+	err := initConfigFile()
+    if err != nil {
+        return "", fmt.Errorf("Error initializing config file: %v", err)
+    }
+
     file, err := os.Open(configFile)
     if err != nil {
         return "", fmt.Errorf("failed to open the configuration file: %v", err)
@@ -408,6 +452,12 @@ func getCommand(name string) (string, error) {
 }
 
 func importRulesFromFile(filePath string) {
+	err := initConfigFile()
+    if err != nil {
+        fmt.Printf("Error initializing config file: %v\n", err)
+        return
+    }
+
     file, err := os.Open(filePath)
     if err != nil {
         fmt.Println("Error opening file:", err)
@@ -425,60 +475,58 @@ func importRulesFromFile(filePath string) {
         return
     }
 
-    rules := extractRulesFromText(rulesText)
+    rules := extractRules(rulesText)
 
-    // Leer reglas existentes
+    // Read existing rules
     existingRules, err := readLines(configFile)
-    if err != nil && !os.IsNotExist(err) {
+    if err != nil {
         fmt.Println("Error reading existing rules:", err)
         return
     }
 
-    // Crear un mapa de reglas existentes para facilitar la búsqueda y actualización
-    existingRulesMap := make(map[string]string)
-    for _, rule := range existingRules {
-        parts := strings.SplitN(rule, " = ", 2)
-        if len(parts) == 2 {
-            existingRulesMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+    // Process rules
+    for _, rule := range rules {
+        parts := strings.Split(rule, " = ")
+        if len(parts) != 2 {
+            fmt.Println("Error parsing rule:", rule)
+            continue
         }
-    }
+        name := strings.TrimSpace(parts[0])
+        command := strings.TrimSpace(parts[1])
 
-    // Procesar reglas importadas
-    for name, command := range rules {
-        if existingCommand, exists := existingRulesMap[name]; exists {
-            if existingCommand != command {
+        // Check if the rule already exists
+        exists := false
+        for i, existingRule := range existingRules {
+            if strings.HasPrefix(existingRule, name+" = ") {
+                exists = true
                 fmt.Printf("Rule '%s' already exists. Do you want to overwrite it? (y/n): ", name)
                 var response string
                 fmt.Scanln(&response)
                 if response == "y" {
-                    existingRulesMap[name] = command
+                    existingRules[i] = fmt.Sprintf("%s = %s", name, command)
                     fmt.Printf("Rule '%s' updated.\n", name)
                 } else {
                     fmt.Printf("Skipping rule '%s'.\n", name)
                 }
-            } else {
-                fmt.Printf("Rule '%s' already exists with the same command. Skipping.\n", name)
+                break
             }
-        } else {
-            existingRulesMap[name] = command
+        }
+
+        if !exists {
+            existingRules = append(existingRules, fmt.Sprintf("%s = %s", name, command))
             fmt.Printf("Rule '%s' added.\n", name)
         }
 
-        // Registry importation event in log file
+        // Log the import event
         err := logEvent("IMPORT_RULE", fmt.Sprintf("From File: %s, Name: %s, Command: %s", filePath, name, command))
         if err != nil {
             fmt.Printf("Warning: Failed to log event: %v\n", err)
         }
     }
 
-    // Convert back map in keylist
-    var updatedRules []string
-    for name, command := range existingRulesMap {
-        updatedRules = append(updatedRules, fmt.Sprintf("%s = %s", name, command))
-    }
-
-    // Write back rules in config file
-    err = writeLinesWithLock(configFile, updatedRules)
+    // Write all rules back to the config file
+    //err = writeLines(configFile, existingRules)
+    err = writeLinesWithLock(configFile, existingRules)
     if err != nil {
         fmt.Println("Error writing rules to config file:", err)
         return
@@ -487,162 +535,32 @@ func importRulesFromFile(filePath string) {
     fmt.Println("Rules imported successfully.")
 }
 
-func importRulesFromURL(url string) {
-    fmt.Println("Fetching rules from URL:", url)
-    resp, err := http.Get(url)
-    if err != nil {
-        fmt.Println("Error fetching rules from URL:", err)
-        logEvent("IMPORT_RULE_ERROR", fmt.Sprintf("Fetching rules from URL: %s | Error: %s", url, err.Error()))
-        return
-    }
-    defer resp.Body.Close()
+func extractRules(text string) []string {
+    var rules []string
 
-    if resp.StatusCode != http.StatusOK {
-        fmt.Println("Failed to fetch rules from URL. Status code:", resp.StatusCode)
-        logEvent("IMPORT_RULE_ERROR", fmt.Sprintf("Fetching rules from URL: %s | Status code: %d", url, resp.StatusCode))
-        return
-    }
-
-    body, err := io.ReadAll(resp.Body)
-    if err != nil {
-        fmt.Println("Error reading response body:", err)
-        logEvent("IMPORT_RULE_ERROR", fmt.Sprintf("Reading response body from URL: %s | Error: %s", url, err.Error()))
-        return
-    }
-
-    // Debug: print the content to check the format
-    fmt.Println("Content of the rules file:")
-    fmt.Println(string(body))
-
-    rulesText := string(body)
-    rules := extractRules(rulesText)
-    fmt.Printf("Extracted %d rules\n", len(rules))
-    logEvent("IMPORT_RULE_SUCCESS", fmt.Sprintf("Extracted %d rules from URL: %s", len(rules), url))
-
-    existingRules, err := readLines(configFile)
-    if err != nil && !os.IsNotExist(err) {
-        fmt.Println("Error reading existing rules:", err)
-        logEvent("IMPORT_RULE_ERROR", fmt.Sprintf("Reading existing rules | Error: %s", err.Error()))
-        return
-    }
-    fmt.Printf("Read %d existing rules\n", len(existingRules))
-
-    existingRulesMap := make(map[string]string)
-    for _, rule := range existingRules {
-        parts := strings.SplitN(rule, " = ", 2)
-        if len(parts) == 2 {
-            existingRulesMap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
-        }
-    }
-
-    updatedRules := false
-    for name, command := range rules {
-        if existingCommand, exists := existingRulesMap[name]; exists {
-            if existingCommand != command {
-                fmt.Printf("Rule '%s' already exists with a different command.\n", name)
-                fmt.Printf("Existing: %s\n", existingCommand)
-                fmt.Printf("New: %s\n", command)
-                fmt.Printf("Do you want to overwrite it? (y/n): ")
-                var response string
-                fmt.Scanln(&response)
-                if response == "y" {
-                    existingRulesMap[name] = command
-                    fmt.Printf("Rule '%s' updated.\n", name)
-                    updatedRules = true
-                    logEvent("IMPORT_RULE_UPDATE", fmt.Sprintf("From URL: %s, Name: %s, Command: %s (updated)", url, name, command))
-                } else {
-                    fmt.Printf("Skipping rule '%s'.\n", name)
-                }
-            } else {
-                fmt.Printf("Rule '%s' already exists with the same command. Skipping.\n", name)
-            }
-        } else {
-            existingRulesMap[name] = command
-            fmt.Printf("Rule '%s' added.\n", name)
-            updatedRules = true
-            logEvent("IMPORT_RULE_ADD", fmt.Sprintf("From URL: %s, Name: %s, Command: %s (added)", url, name, command))
-        }
-    }
-
-    if !updatedRules {
-        fmt.Println("No rules were added or updated.")
-        logEvent("IMPORT_RULE_INFO", "No rules were added or updated.")
-        return
-    }
-
-    var updatedRulesList []string
-    for name, command := range existingRulesMap {
-        updatedRulesList = append(updatedRulesList, fmt.Sprintf("%s = %s", name, command))
-    }
-
-    err = writeLinesWithLock(configFile, updatedRulesList)
-    if err != nil {
-        fmt.Println("Error writing rules to config file:", err)
-        logEvent("IMPORT_RULE_ERROR", fmt.Sprintf("Writing rules to config file | Error: %s", err.Error()))
-        return
-    }
-
-    fmt.Println("Rules imported successfully.")
-    logEvent("IMPORT_RULE_SUCCESS", fmt.Sprintf("Rules imported successfully from URL: %s", url))
-}
-
-func extractRules(text string) map[string]string {
-    rules := make(map[string]string)
-
-    // Try to parse as HTML first
-    doc, err := html.Parse(strings.NewReader(text))
-    if err == nil {
-        var f func(*html.Node)
-        f = func(n *html.Node) {
-            if n.Type == html.TextNode {
-                // Extraer reglas del texto del nodo HTML
-                for k, v := range extractRulesFromText(n.Data) {
-                    rules[k] = v
-                }
-            }
-            for c := n.FirstChild; c != nil; c = c.NextSibling {
-                f(c)
-            }
-        }
-        f(doc)
-    } else {
-        // If not HTML, try to extract rules directly
-        for k, v := range extractRulesFromText(text) {
-            rules[k] = v
-        }
-    }
-
-    return rules
-}
-
-func extractRulesFromText(text string) map[string]string {
-    rules := make(map[string]string)
-    re := regexp.MustCompile(`b:([^=]+) = (.+):b`)
+    re := regexp.MustCompile(`b:([^=]+) = (.*?):b`)
     matches := re.FindAllStringSubmatch(text, -1)
     for _, match := range matches {
         ruleName := strings.TrimSpace(match[1])
         ruleCommand := strings.TrimSpace(match[2])
 
-        // Reemplazar entidades HTML con sus caracteres reales
+        // Replace HTML entities with their actual characters
         ruleCommand = html.UnescapeString(ruleCommand)
 
-        // Decodificar secuencias de escape Unicode
-        ruleCommand = decodeUnicode(ruleCommand)
-
-        rules[ruleName] = ruleCommand
+        rule := fmt.Sprintf("%s = %s", ruleName, ruleCommand)
+        rules = append(rules, rule)
     }
+
     return rules
 }
 
-func decodeUnicode(s string) string {
-    re := regexp.MustCompile(`\\u([0-9a-fA-F]{4})`)
-    return re.ReplaceAllStringFunc(s, func(m string) string {
-        code, _ := strconv.ParseInt(m[2:], 16, 32)
-        return string(rune(code))
-    })
-}
-
 func exportRules() {
+	err := initConfigFile()
+    if err != nil {
+        fmt.Printf("Error initializing config file: %v\n", err)
+        return
+    }
+
     fmt.Println("Exporting rules in progress... Press ctrl+c to quit")
     fmt.Println("You can export rules in bulk, e.g., <rule1> <rule2>")
 
@@ -659,7 +577,8 @@ func exportRules() {
             break
         } else {
             rules := strings.Fields(text)
-            exportRules = nil // Reset the exportRules slice for re-selection
+            // Reset the exportRules slice for re-selection
+			exportRules = nil
             var invalidRules []string
             for _, rule := range rules {
                 if ruleExists(rule) {
@@ -741,6 +660,12 @@ func exportRules() {
 }
 
 func ruleExists(name string) bool {
+	err := initConfigFile()
+    if err != nil {
+        fmt.Printf("Error initializing config file: %v\n", err)
+        return false
+    }
+
     file, err := os.Open(configFile)
     if err != nil {
         return false
@@ -759,6 +684,12 @@ func ruleExists(name string) bool {
 }
 
 func getAllRules() []string {
+	err := initConfigFile()
+    if err != nil {
+        fmt.Printf("Error initializing config file: %v\n", err)
+        return []string{}
+    }
+
     var rules []string
 
     file, err := os.Open(configFile)
@@ -836,6 +767,11 @@ func processBottles(command string, bottleValues map[string]string) string {
 }
 
 func readLines(filename string) ([]string, error) {
+	err := initConfigFile()
+    if err != nil {
+        return nil, fmt.Errorf("Error initializing config file: %v", err)
+    }
+
     file, err := os.Open(filename)
     if err != nil {
         return nil, err
@@ -851,6 +787,11 @@ func readLines(filename string) ([]string, error) {
 }
 
 func writeLines(filename string, lines []string) error {
+	err := initConfigFile()
+    if err != nil {
+        return fmt.Errorf("Error initializing config file: %v", err)
+    }
+
     file, err := os.Create(filename)
     if err != nil {
         return err
@@ -902,6 +843,36 @@ func logEvent(eventType, details string) error {
     return nil
 }
 
+func initConfigFile() error {
+    homeDir, err := os.UserHomeDir()
+    if err != nil {
+        return fmt.Errorf("failed to get home directory: %v", err)
+    }
+
+    configDirPath := filepath.Join(homeDir, configDir)
+    configPath := filepath.Join(configDirPath, configFileName)
+
+    // Create the directory if it doesn't exist
+    err = os.MkdirAll(configDirPath, 0755)
+    if err != nil {
+        return fmt.Errorf("failed to create config directory: %v", err)
+    }
+
+    // Open or create the configuration file with read-write permissions for the user
+    file, err := os.OpenFile(configPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+    if err != nil {
+        if os.IsPermission(err) {
+            log.Printf("Permission error: %v\n", err)
+            return fmt.Errorf("failed to open or create config file due to permissions: %v", err)
+        }
+        log.Printf("Failed to open or create config file: %v\n", err)
+        return fmt.Errorf("failed to open or create config file: %v", err)
+    }
+    defer file.Close()
+
+    return nil
+}
+
 func getIP() string {
     addrs, err := net.InterfaceAddrs()
     if err == nil {
@@ -926,6 +897,11 @@ func isReservedName(name string) bool {
 }
 
 func writeLinesWithLock(filename string, lines []string) error {
+	err := initConfigFile()
+    if err != nil {
+        return fmt.Errorf("Error initializing config file: %v", err)
+    }
+
     file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
     if err != nil {
         return err
