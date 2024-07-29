@@ -1,0 +1,3 @@
+baby: statically-linked-binary
+# Context: Go build statically linked binaries by default
+# This is a lintian false positive
