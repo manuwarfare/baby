@@ -1,4 +1,0 @@
-baby: statically-linked-binary
-# Context: Go build statically linked binaries by default
-# Allowed lintian tag override marked as nonfatal by ftpmaster
-# Further info: https://ftp-master.debian.org/static/lintian.tags

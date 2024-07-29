@@ -4,7 +4,8 @@ Priority: optional
 Maintainer: Manuel Guerra <ar.manuelguerra@gmail.com>
 Build-Depends: debhelper-compat (= 13),
                dh-golang,
-               golang-go
+               golang-go,
+               golang-golang-x-sys-dev
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 XS-Go-Import-Path: github.com/manuwarfare/baby
