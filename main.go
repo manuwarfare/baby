@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-    "net"
 	"html"
+	"net"
 	"path/filepath"
 	"os/exec"
 	"regexp"
@@ -14,7 +14,7 @@ import (
 	"time"
 	"log"
 
-    "golang.org/x/sys/unix"
+	"golang.org/x/sys/unix"
 
 )
 
@@ -32,6 +32,10 @@ var reservedNames = []string{
     "-h", "-l", "-n", "-r", "-c", "-ln", "-v", "-i", "-e", "-b",
     "-H", "-L", "-N", "-R", "-C", "-LN", "-V", "-I", "-E", "-B",
     "-lN", "-Ln",
+
+    // Reserved for future implementations
+    "-g", "-G", "-w", "-W", "-t", "-T", "-x", "-X", "-y", "-Y",
+    "-z", "-Z", "-a", "-A",
 }
 
 func main() {
@@ -43,7 +47,6 @@ func main() {
     }
     configFile = filepath.Join(homeDir, ".config", "baby", "baby.conf")
 
-    // Initialize the config file
     err = initConfigFile()
     if err != nil {
         log.Fatalf("Failed to initialize config file: %v", err)
