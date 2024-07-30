@@ -1,1 +1,0 @@
-extend-diff-ignore = (^|/)(\.cache|\.go|go\.mod|go\.sum|\.git|\.gitignore)($|/)
