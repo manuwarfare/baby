@@ -23,7 +23,7 @@ const (
     configFileName = "baby.conf"
     logDir = "/.local/share/baby/"
     logFileName = "baby.log"
-    VERSION = "1.0.57"
+    VERSION = "1.0.58"
 )
 
 var configFile = filepath.Join(os.Getenv("HOME"), configDir, configFileName)

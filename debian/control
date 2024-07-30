@@ -10,8 +10,8 @@ Standards-Version: 4.7.0
 Rules-Requires-Root: no
 XS-Go-Import-Path: github.com/manuwarfare/baby
 Homepage: https://github.com/manuwarfare/baby
-Vcs-Git: https://github.com/manuwarfare/baby.git
-Vcs-Browser: https://github.com/manuwarfare/baby
+Vcs-Git: https://salsa.debian.org/manuelguerra/baby.git
+Vcs-Browser: https://salsa.debian.org/manuelguerra/baby
 
 Package: baby
 Architecture: any
